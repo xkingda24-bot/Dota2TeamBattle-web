@@ -333,7 +333,6 @@ async function renderDetail(id){
     }else{
       html += `<div class="row">
         <select id="r-role" style="width:120px"><option value="player">队员</option>${t.mode==='captain'?'<option value="captain">队长</option>':''}${t.waitLimit>0?'<option value="waitlist">替补</option>':''}</select>
-        <input id="r-secret" placeholder="比赛密码" value="${esc(localStorage.getItem('d2_secret_'+t.id)||'')}" style="width:140px">
         <button class="btn" onclick="doTournamentRegister(${t.id})">报名</button></div>`;
     }
     html += `</div>`;
@@ -436,9 +435,10 @@ async function checkSecretGate(id){
   }catch(e){ showMsg(e.message); }
 }
 async function doTournamentRegister(id){
+  const secret = localStorage.getItem('d2_secret_'+id);
+  if(!secret){ showSecretGate(id); return; }
   try{
-    const d = await api.post('/api/tournament/'+id+'/register', {role:$('#r-role').value, secret:$('#r-secret').value});
-    localStorage.setItem('d2_secret_'+id, $('#r-secret').value.trim());
+    const d = await api.post('/api/tournament/'+id+'/register', {role:$('#r-role').value, secret});
     const roleCn = d.role==='captain'?'队长':d.role==='waitlist'?'替补':'队员';
     showMsg('报名成功'+(d.role==='waitlist'?'（队员已满，已自动转为替补）':'')+'：'+roleCn, true);
     renderDetail(id);
