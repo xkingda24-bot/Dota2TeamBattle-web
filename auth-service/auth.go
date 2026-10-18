@@ -360,13 +360,19 @@ func (a *App) addAdmin(w http.ResponseWriter, r *http.Request, uid int) {
 		return
 	}
 	var req struct {
+		UserID   int    `json:"userID"`
 		Username string `json:"username"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "请求格式错误")
 		return
 	}
-	target, err := a.store.GetUserByUsername(strings.TrimSpace(req.Username))
+	var target *User
+	if req.UserID > 0 {
+		target, err = a.store.GetUserByID(req.UserID)
+	} else {
+		target, err = a.store.GetUserByUsername(strings.TrimSpace(req.Username))
+	}
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "未找到该用户")
 		return
