@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dota2 战队赛</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#21262d; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --accent:#f0a12b; --accent2:#e03a3a;
+  --ok:#3fb950; --danger:#f85149; --warn:#d29922;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei",system-ui,sans-serif;font-size:14px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+.btn{display:inline-block;background:var(--accent);color:#0d1117;border:none;border-radius:6px;padding:8px 16px;font-size:14px;font-weight:600}
+.btn:hover{filter:brightness(1.1)}
+.btn.small{padding:4px 10px;font-size:12px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn.danger{background:var(--danger)}
+.btn.ok{background:var(--ok)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.container{max-width:960px;margin:0 auto;padding:16px}
+.topbar{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:10px 0}
+.topbar .container{display:flex;align-items:center;gap:12px;padding-top:0;padding-bottom:0}
+.logo{font-size:18px;font-weight:800;color:var(--accent);cursor:pointer}
+.topbar nav{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+.topbar .user{margin-left:auto;display:flex;align-items:center;gap:8px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h3{margin-bottom:10px;font-size:15px;color:var(--accent)}
+.grid{display:grid;gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:12px}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:var(--panel2);border:1px solid var(--border)}
+.tag.reg{color:var(--ok);border-color:var(--ok)}
+.tag.draft{color:var(--warn);border-color:var(--warn)}
+.tag.battle{color:var(--accent);border-color:var(--accent)}
+.tag.finished{color:var(--muted)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th,.tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl th{color:var(--muted);font-weight:600;font-size:12px}
+.match{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.match .vs{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.match .team{flex:1;padding:6px 8px;border-radius:6px;background:var(--panel)}
+.match .team.win{background:#1f3a2b;border:1px solid var(--ok)}
+.match .team.lose{opacity:.55}
+.match .score{font-weight:800;color:var(--accent)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-bg.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;width:90%;max-width:420px;max-height:80vh;overflow:auto}
+.role-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;margin-left:6px}
+.role-captain{background:var(--accent);color:#0d1117}
+.role-player{background:var(--panel2);border:1px solid var(--border)}
+.role-waitlist{background:var(--panel2);color:var(--muted)}
+.pick-box{border:2px dashed var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;min-height:40px}
+.pick-box.active{border-color:var(--accent);background:#221a0e}
+.empty{text-align:center;color:var(--muted);padding:30px 0}
+.footer{margin-top:30px;text-align:center;color:var(--muted);font-size:12px}
+.hidden{display:none!important}
+.roles-chip{display:inline-flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;border:1px solid var(--border)}
+.chip.on{background:var(--accent);color:#0d1117;border-color:var(--accent);cursor:pointer}
+.chip.off{opacity:.5;cursor:pointer}
+.bracket-section{margin-bottom:14px}
+.bracket-title{color:var(--accent);font-weight:700;margin:10px 0 6px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="topbar hidden" id="topbar">
+  <div class="container">
+    <span class="logo" onclick="go('#/home')">DOTA2 战队赛</span>
+    <nav>
+      <button class="btn ghost small" onclick="go('#/home')">主页</button>
+      <button class="btn ghost small" onclick="go('#/create')" id="nav-create" style="display:none">创建比赛</button>
+      <button class="btn ghost small" onclick="go('#/staff')" id="nav-staff" style="display:none">管理员</button>
+      <button class="btn ghost small" onclick="go('#/profile')" id="nav-profile">我的资料</button>
+    </nav>
+    <div class="user" id="userinfo"></div>
+  </div>
+</div>
+<div class="container" id="view"></div>
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div class="footer">Dota2 战队赛 · Web 版</div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const api = {
+  token: localStorage.getItem('d2_token') || '',
+  uid: Number(localStorage.getItem('d2_uid') || 0),
+  me: null,
+  setAuth(token, user){ this.token=token; this.uid=user.userID; this.me=user; localStorage.setItem('d2_token',token); localStorage.setItem('d2_uid',user.userID); },
+  clear(){ this.token=''; this.uid=0; this.me=null; localStorage.removeItem('d2_token'); localStorage.removeItem('d2_uid'); },
+  async call(method, path, body){
+    const opt = {method, headers:{}};
+    if(body!==undefined){ opt.headers['Content-Type']='application/json'; opt.body=JSON.stringify(body); }
+    if(this.token) opt.headers['Authorization']='Bearer '+this.token;
+    const r = await fetch(path, opt);
+    let data = {};
+    try{ data = await r.json(); }catch(e){}
+    if(r.status===401 && this.token && !path.startsWith('/api/auth/login')){
+      this.clear(); go('#/login'); showMsg('登录已失效，请重新登录'); throw new Error('unauthorized');
+    }
+    if(!r.ok){ throw new Error(data.error || ('请求失败 '+r.status)); }
+    return data;
+  },
+  get(p){ return this.call('GET', p); },
+  post(p, b){ return this.call('POST', p, b); },
+  del(p){ return this.call('DELETE', p); }
+};
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-CN',{hour12:false}) : '';
+const MODE_CN = {captain:'队长选人', auto:'系统分组'};
+const STATUS_CN = {registration:'报名中', draft:'选人/分组', battle:'对战', finished:'已结束'};
+function showMsg(msg, ok){ const m=$('#modal-bg'); $('#modal').innerHTML='<h3>'+(ok?'完成':'提示')+'</h3><p style="margin:10px 0">'+esc(msg)+'</p><button class="btn" onclick="closeModal()">确定</button>'; m.classList.add('show'); }
+function closeModal(){ $('#modal-bg').classList.remove('show'); }
+function confirmBox(title, text, yesLabel, onYes){
+  $('#modal').innerHTML='<h3>'+esc(title)+'</h3><p style="margin:10px 0">'+esc(text)+'</p><div class="row"><button class="btn danger" id="cf-yes">'+esc(yesLabel)+'</button><button class="btn ghost" onclick="closeModal()">取消</button></div>';
+  $('#modal-bg').classList.add('show');
+  $('#cf-yes').onclick=async ()=>{ closeModal(); await onYes(); };
+}
+function go(hash){ location.hash = hash; }
+
+async function boot(){
+  if(api.token){
+    try{ api.me = await api.get('/api/auth/me'); }
+    catch(e){ api.clear(); }
+  }
+  renderTopbar();
+  route();
+}
+function renderTopbar(){
+  const tb=$('#topbar');
+  if(!api.token || !api.me){ tb.classList.add('hidden'); return; }
+  tb.classList.remove('hidden');
+  $('#nav-create').style.display = api.me.isAdmin ? '' : 'none';
+  $('#nav-staff').style.display = api.me.isSuper ? '' : 'none';
+  $('#nav-profile').textContent = '我的资料';
+  $('#userinfo').innerHTML='<span class="muted">'+esc(api.me.nickname)+'</span><button class="btn ghost small" onclick="logout()">退出</button>';
+}
+function logout(){ api.clear(); go('#/login'); }
+
+// ---------- 路由 ----------
+window.addEventListener('hashchange', route);
+async function route(){
+  if(!$('#view')) return;
+  const h = location.hash || '#/home';
+  if(!api.token || !api.me){
+    if(h.startsWith('#/login')) return renderLogin();
+    go('#/login'); return;
+  }
+  renderTopbar();
+  try{
+    if(h==='#/home') return await renderHome();
+    if(h==='#/create') return renderCreate();
+    if(h==='#/staff') return await renderStaff();
+    if(h==='#/profile') return renderProfile();
+    if(h.startsWith('#/t/')) return await renderDetail(h.slice(3));
+    if(h.startsWith('#/draft/')) return await renderDraft(h.slice(7));
+    if(h.startsWith('#/bracket/')) return await renderBracket(h.slice(9));
+    go('#/home');
+  }catch(e){ showMsg(e.message); }
+}
+
+// ---------- 登录 / 注册 ----------
+function switchTab(showId, hideId, activeBtn, ghostBtn){
+  const el = id => document.getElementById(id);
+  el(showId).classList.remove('hidden'); el(hideId).classList.add('hidden');
+  el(activeBtn).classList.remove('ghost'); el(ghostBtn).classList.add('ghost');
+}
+function renderLogin(){
+  $('#view').innerHTML = `
+  <div style="max-width:400px;margin:8vh auto">
+    <h2 style="text-align:center;color:var(--accent);margin-bottom:20px">DOTA2 战队赛</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn small" id="lg-tab">登录</button>
+        <button class="btn ghost small" id="rg-tab">注册</button>
+      </div>
+      <div id="lg-form">
+        <input id="lg-user" placeholder="用户名" style="width:100%;margin-bottom:8px">
+        <input id="lg-pass" type="password" placeholder="密码" style="width:100%;margin-bottom:14px" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="btn" style="width:100%" id="lg-submit">登录</button>
+      </div>
+      <div id="rg-form" class="hidden">
+        <input id="rg-user" placeholder="用户名（3-32 位字母/数字/下划线）" style="width:100%;margin-bottom:8px">
+        <input id="rg-pass" type="password" placeholder="密码（至少 6 位）" style="width:100%;margin-bottom:8px">
+        <input id="rg-nick" placeholder="昵称（1-20 个字）" style="width:100%;margin-bottom:14px">
+        <button class="btn" style="width:100%" id="rg-submit">注册并登录</button>
+      </div>
+    </div>
+    <p class="muted" style="text-align:center">报名前请先在「我的资料」完善昵称、天梯分与常玩位置</p>
+  </div>`;
+  $('#lg-tab').onclick=()=>{ switchTab('lg-form','rg-form','lg-tab','rg-tab'); };
+  $('#rg-tab').onclick=()=>{ switchTab('rg-form','lg-form','rg-tab','lg-tab'); };
+  $('#lg-submit').onclick=doLogin;
+  $('#rg-submit').onclick=doAccountRegister;
+  $('#rg-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doAccountRegister(); });
+}
+function val(id){ const el = document.getElementById(id); return el ? el.value : ''; }
+async function doLogin(){
+  try{
+    const u = val('lg-user').trim(), p = val('lg-pass');
+    if(!u || !p){ showMsg('请输入用户名和密码'); return; }
+    const d = await api.post('/api/auth/login', {username:u, password:p});
+    api.setAuth(d.token, d.user); go('#/home');
+  }catch(e){ showMsg(e.message); }
+}
+async function doAccountRegister(){
+  try{
+    const u = val('rg-user').trim(), p = val('rg-pass'), n = val('rg-nick').trim();
+    if(!u || !p || !n){ showMsg('请填写完整的用户名、密码和昵称'); return; }
+    const d = await api.post('/api/auth/register', {username:u, password:p, nickname:n});
+    api.setAuth(d.token, d.user); showMsg('注册成功，请先完善个人资料', true); go('#/profile');
+  }catch(e){ showMsg(e.message); }
+}
+
+// ---------- 主页 ----------
+async function renderHome(){
+  const d = await api.get('/api/tournament/home?todayStart=' + (new Date().setHours(0,0,0,0)));
+  let html = `<div class="row" style="margin-bottom:14px">
+    <h2 style="flex:1">主页</h2>`;
+  if(d.isAdmin) html += `<button class="btn" onclick="go('#/create')">创建比赛</button>`;
+  if(d.isSuper) html += `<button class="btn ghost" onclick="go('#/staff')">管理员管理</button>`;
+  html += `</div>`;
+  if(!d.hasSuper){
+    html += `<div class="card" style="border-color:var(--warn)"><b>初始化最高管理员：</b>你是第一个注册的用户。系统需要一位最高管理员来管理比赛与管理员名单。请点击下面的按钮将自己设为最高管理员。<br>
+    <button class="btn ok" style="margin-top:8px" onclick="initSuper()">我成为最高管理员</button></div>`;
+  }
+  html += `<div class="card"><h3>今日比赛</h3>` + cardList(d.today, d) + `</div>`;
+  html += `<div class="card"><h3>历史比赛</h3>` + cardList(d.older, d) + `</div>`;
+  $('#view').innerHTML = html;
+}
+function cardList(list, d){
+  if(!list || !list.length) return '<div class="empty">暂无比赛</div>';
+  return list.map(t => {
+    const isAdmin = d.isAdmin;
+    return `<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="go('#/t/${t.id}')">
+      <div class="row">
+        <b>${esc(t.name)}</b>
+        <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
+        <span class="muted">${esc(t.time||'')}</span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="muted">${MODE_CN[t.mode]} · N=${t.N} K=${t.K}</span>
+        <span class="muted">队长 ${t.captainFilled}/${t.captainTotal} · 队员 ${t.playerFilled}/${t.playerTotal}</span>
+        ${t.champion ? `<span class="tag finished">冠军：${esc(t.champion.name)}</span>` : ''}
+        ${t.meRegistered ? '<span class="tag reg">已报名</span>' : ''}
+      </div></div>`;
+  }).join('');
+}
+async function initSuper(){
+  try{ await api.post('/api/auth/init-super', {}); showMsg('你已是最高管理员', true); renderHome(); }catch(e){ showMsg(e.message); }
+}
+
+// ---------- 创建比赛 ----------
+function renderCreate(){
+  const now = new Date();
+  const defTime = now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate()+' '+(now.getHours()+1)+':00';
+  $('#view').innerHTML = `<div class="card" style="max-width:560px;margin:0 auto">
+    <h3>创建比赛</h3>
+    <label class="muted">比赛名称</label><input id="c-name" placeholder="例：周末内战" style="width:100%;margin-bottom:10px">
+    <label class="muted">比赛时间</label><input id="c-time" value="${defTime}" style="width:100%;margin-bottom:10px">
+    <label class="muted">报名暗号（参加者需输入）</label><input id="c-secret" placeholder="例：1234" style="width:100%;margin-bottom:10px">
+    <label class="muted">模式</label>
+    <select id="c-mode" style="width:100%;margin-bottom:10px">
+      <option value="captain">队长选人（队长蛇形选人组队）</option>
+      <option value="auto">系统分组（按天梯分自动均衡分组）</option>
+    </select>
+    <div class="row" style="margin-bottom:10px">
+      <div style="flex:1"><label class="muted">队伍数 N（2-16）</label><input id="c-n" type="number" value="5" min="2" max="16" style="width:100%"></div>
+      <div style="flex:1"><label class="muted">每队人数 K（1-5）</label><input id="c-k" type="number" value="5" min="1" max="5" style="width:100%"></div>
+    </div>
+    <label class="muted">替补名额（0-20，可选）</label><input id="c-wait" type="number" value="3" min="0" max="20" style="width:100%;margin-bottom:16px">
+    <button class="btn" style="width:100%" onclick="doCreate()">创建</button></div>`;
+}
+async function doCreate(){
+  try{
+    const d = await api.post('/api/tournament', {
+      name:$('#c-name').value.trim(), time:$('#c-time').value.trim(), secret:$('#c-secret').value.trim(),
+      mode:$('#c-mode').value, N:Number($('#c-n').value), K:Number($('#c-k').value), waitLimit:Number($('#c-wait').value)
+    });
+    showMsg('创建成功', true); go('#/t/'+d.id);
+  }catch(e){ showMsg(e.message); }
+}
+
+// ---------- 比赛详情 ----------
+async function renderDetail(id){
+  const t = await api.get('/api/tournament/'+id);
+  const me = api.me;
+  let html = `<div class="row" style="margin-bottom:10px">
+    <h2 style="flex:1">${esc(t.name)}</h2>
+    <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
+    <button class="btn ghost small" onclick="go('#/home')">返回</button></div>
+  <div class="muted" style="margin-bottom:12px">${esc(t.time||'')} · ${MODE_CN[t.mode]} · N=${t.N} K=${t.K} · 创建者 ${esc(t.creatorName||'')}</div>`;
+
+  if(t.champion) html += `<div class="card" style="border-color:var(--accent)"><h3>🏆 冠军：${esc(t.champion.name)}</h3></div>`;
+
+  // 报名区
+  if(t.status==='registration'){
+    html += `<div class="card"><h3>报名</h3>`;
+    if(t.myReg){
+      html += `<p>你已报名：<span class="role-badge ${t.myReg.role==='captain'?'role-captain':t.myReg.role==='waitlist'?'role-waitlist':'role-player'}">${t.myReg.role==='captain'?'队长':t.myReg.role==='waitlist'?'替补':'队员'}</span></p>
+      <div class="row" style="margin-top:8px"><button class="btn danger small" onclick="doCancel(${t.id})">取消报名</button></div>`;
+    }else{
+      html += `<div class="row">
+        <select id="r-role" style="width:120px"><option value="player">队员</option>${t.mode==='captain'?'<option value="captain">队长</option>':''}${t.waitLimit>0?'<option value="waitlist">替补</option>':''}</select>
+        <input id="r-secret" placeholder="报名暗号" style="width:140px">
+        <button class="btn" onclick="doTournamentRegister(${t.id})">报名</button></div>`;
+    }
+    html += `</div>`;
+  }
+
+  // 名单
+  const caps = t.registrations.filter(r=>r.role==='captain');
+  const plays = t.registrations.filter(r=>r.role==='player');
+  const waits = t.registrations.filter(r=>r.role==='waitlist');
+  html += `<div class="card"><h3>名单 <span class="muted">队长 ${caps.length}/${t.captainTotal} · 队员 ${plays.length}/${t.playerTotal} · 替补 ${waits.length}/${t.waitLimit}</span></h3>`;
+  if(t.secret && t.isAdmin) html += `<p class="muted">报名暗号：<b style="color:var(--accent)">${esc(t.secret)}</b>（仅管理员可见）</p>`;
+  html += `<table class="tbl"><tr><th>昵称</th><th>角色</th><th>天梯分</th><th>位置</th><th>签名</th>${t.isAdmin?'<th></th>':''}</tr>`;
+  [...caps.map(r=>[r,'captain']), ...plays.map(r=>[r,'player']), ...waits.map(r=>[r,'waitlist'])].forEach(([r])=>{
+    html += `<tr><td>${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
+    <td><span class="role-badge ${r.role==='captain'?'role-captain':r.role==='waitlist'?'role-waitlist':'role-player'}">${r.role==='captain'?'队长':r.role==='waitlist'?'替补':'队员'}</span></td>
+    <td>${r.mmr}</td><td>${(r.roles||[]).join('/')}</td><td class="muted">${esc(r.signature||'')}</td>
+    ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`;
+  });
+  html += `</table></div>`;
+
+  // 队伍展示（分组后）
+  if(t.teams && t.teams.length){
+    html += `<div class="card"><h3>队伍</h3>`;
+    t.teams.forEach((team,i)=>{
+      html += `<div class="match"><b style="color:var(--accent)">${esc(team.captain.teamName||team.captain.nickname+'战队')}</b> <span class="muted">队长 ${esc(team.captain.nickname)}</span>
+      <span class="muted">：${team.players.map(p=>esc(p.nickname)).join('、')}</span>`;
+      if(t.status==='draft'||t.status==='battle'){
+        if(me.userID===team.captain.userID||t.isAdmin){
+          html += ` <button class="btn ghost small" onclick="setTeamName(${t.id},${team.captain.userID})">设置队名</button>`;
+        }
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  // 管理员操作
+  if(t.isAdmin){
+    html += `<div class="card"><h3>管理员操作</h3><div class="row" style="gap:8px">`;
+    if(t.status==='registration'){
+      if(t.mode==='auto') html += `<button class="btn" onclick="autoGroup(${t.id})">系统分组预览</button>`;
+      else html += `<button class="btn" onclick="startDraft(${t.id})" ${t.captainFilled<t.captainTotal||t.playerFilled<t.playerTotal?'disabled':''}>开始选人</button>`;
+      html += `<button class="btn ghost" onclick="editConfig(${t.id})">修改配置</button>`;
+      html += `<button class="btn ghost" onclick="seedTest(${t.id})">注入虚拟数据（测试）</button>`;
+      html += `<button class="btn danger" onclick="delTournament(${t.id})">删除比赛</button>`;
+    }
+    if(t.status==='draft'){
+      if(t.mode==='captain') html += `<button class="btn" onclick="go('#/draft/${t.id}')">进入选人</button>`;
+      html += `<button class="btn" onclick="setSeeding(${t.id})">设置对阵落位</button>`;
+      html += `<button class="btn ghost" onclick="randomSeeding(${t.id})">随机落位</button>`;
+      html += `<button class="btn ok" onclick="startBracket(${t.id})">生成对阵</button>`;
+      if(t.mode==='auto') html += `<button class="btn danger" onclick="resetGroup(${t.id})">重新分组</button>`;
+    }
+    if(t.status==='battle'){
+      html += `<button class="btn" onclick="go('#/bracket/${t.id}')">进入赛程管理</button>`;
+    }
+    if(t.status!=='finished' && t.champion){
+      html += `<button class="btn ok" onclick="finishTournament(${t.id})">结束并归档</button>`;
+    }
+    html += `</div></div>`;
+  }
+  $('#view').innerHTML = html;
+}
+async function doTournamentRegister(id){
+  try{
+    const d = await api.post('/api/tournament/'+id+'/register', {role:$('#r-role').value, secret:$('#r-secret').value});
+    const roleCn = d.role==='captain'?'队长':d.role==='waitlist'?'替补':'队员';
+    showMsg('报名成功'+(d.role==='waitlist'?'（队员已满，已自动转为替补）':'')+'：'+roleCn, true);
+    renderDetail(id);
+  }catch(e){ showMsg(e.message); }
+}
+async function doCancel(id){
+  try{ await api.post('/api/tournament/'+id+'/cancel', {}); showMsg('已取消报名', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+async function removeReg(id, uid){
+  confirmBox('移除报名','确定移除该用户的报名？','移除', async()=>{ try{ await api.post('/api/tournament/'+id+'/remove-reg', {userID:uid}); renderDetail(id); }catch(e){ showMsg(e.message); } });
+}
+async function moveReg(id, uid, toRole){
+  try{ await api.post('/api/tournament/'+id+'/move-reg', {userID:uid, toRole}); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+async function startDraft(id){
+  try{ await api.post('/api/tournament/'+id+'/start-draft', {}); showMsg('选人已开始', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+async function editConfig(id){
+  const t = await api.get('/api/tournament/'+id);
+  $('#modal').innerHTML=`<h3>修改报名配置</h3>
+  <label class="muted">名称</label><input id="e-name" value="${esc(t.name)}" style="width:100%;margin-bottom:8px">
+  <label class="muted">时间</label><input id="e-time" value="${esc(t.time)}" style="width:100%;margin-bottom:8px">
+  <label class="muted">暗号</label><input id="e-secret" value="${esc(t.secret)}" style="width:100%;margin-bottom:8px">
+  <label class="muted">模式</label><select id="e-mode" style="width:100%;margin-bottom:8px">
+    <option value="captain" ${t.mode==='captain'?'selected':''}>队长选人</option><option value="auto" ${t.mode==='auto'?'selected':''}>系统分组</option></select>
+  <div class="row" style="margin-bottom:8px"><div style="flex:1"><label class="muted">N</label><input id="e-n" type="number" value="${t.N}" min="2" max="16" style="width:100%"></div>
+  <div style="flex:1"><label class="muted">K</label><input id="e-k" type="number" value="${t.K}" min="1" max="5" style="width:100%"></div></div>
+  <label class="muted">替补名额</label><input id="e-wait" type="number" value="${t.waitLimit}" min="0" max="20" style="width:100%;margin-bottom:12px">
+  <button class="btn" style="width:100%" onclick="saveConfig(${id})">保存</button>`;
+  $('#modal-bg').classList.add('show');
+}
+async function saveConfig(id){
+  try{
+    await api.post('/api/tournament/'+id+'/config', {name:$('#e-name').value.trim(), time:$('#e-time').value.trim(), secret:$('#e-secret').value.trim(), mode:$('#e-mode').value, N:Number($('#e-n').value), K:Number($('#e-k').value), waitLimit:Number($('#e-wait').value)});
+    closeModal(); renderDetail(id);
+  }catch(e){ showMsg(e.message); }
+}
+async function setTeamName(id, uid){
+  $('#modal').innerHTML=`<h3>设置队伍名称</h3><input id="tn" placeholder="队伍名称（最多 10 字）" style="width:100%;margin:10px 0"><button class="btn" style="width:100%" onclick="saveTeamName(${id},${uid})">保存</button>`;
+  $('#modal-bg').classList.add('show');
+}
+async function saveTeamName(id, uid){
+  try{ await api.post('/api/tournament/'+id+'/team-name', {userID:uid, teamName:$('#tn').value.trim()}); closeModal(); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+async function setSeeding(id){
+  const t = await api.get('/api/tournament/'+id);
+  const teams = t.teams && t.teams.length ? t.teams : t.draftInfo ? t.draftInfo.captainOrder.map((c,i)=>({captain:c})) : [];
+  $('#modal').innerHTML=`<h3>设置胜者组第一轮落位</h3><p class="muted">按落位顺序输入队伍序号（0 开始，用英文逗号分隔），例如 4,3,2,1,0</p>
+  <div class="muted" style="margin:8px 0">队伍序号：${teams.map((x,i)=>i+'='+esc(x.captain.teamName||x.captain.nickname+'战队')).join('，')}</div>
+  <input id="sd" placeholder="例：4,3,2,1,0" style="width:100%;margin-bottom:8px">
+  <button class="btn" style="width:100%" onclick="saveSeeding(${id},${teams.length})">保存</button>`;
+  $('#modal-bg').classList.add('show');
+}
+async function saveSeeding(id, n){
+  try{
+    const arr = $('#sd').value.split(',').map(x=>Number(x.trim()));
+    if(arr.length!==n){ throw new Error('需输入恰好 '+n+' 个序号'); }
+    await api.post('/api/tournament/'+id+'/seeding', {seeding:arr}); closeModal(); renderDetail(id);
+  }catch(e){ showMsg(e.message); }
+}
+async function randomSeeding(id){
+  try{ await api.post('/api/tournament/'+id+'/shuffle-seeding', {}); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+async function startBracket(id){
+  confirmBox('生成对阵','确定生成 TI 双败赛程？生成后进入对战阶段。','生成', async()=>{ try{ await api.post('/api/tournament/'+id+'/start-bracket', {}); go('#/bracket/'+id); }catch(e){ showMsg(e.message); } });
+}
+async function finishTournament(id){
+  confirmBox('结束比赛','比赛已产生冠军，确定归档？','归档', async()=>{ try{ await api.post('/api/tournament/'+id+'/finish', {}); renderDetail(id); }catch(e){ showMsg(e.message); } });
+}
+async function delTournament(id){
+  confirmBox('删除比赛','删除后不可恢复，确定删除？','删除', async()=>{ try{ await api.del('/api/tournament/'+id); go('#/home'); }catch(e){ showMsg(e.message); } });
+}
+async function resetGroup(id){
+  confirmBox('重新分组','将退回报名阶段重新分组，确定？','退回', async()=>{ try{ await api.post('/api/tournament/'+id+'/reset-group', {}); renderDetail(id); }catch(e){ showMsg(e.message); } });
+}
+async function seedTest(id){
+  confirmBox('注入虚拟数据','将注入虚拟测试用户报名（仅测试用），确定？','注入', async()=>{ try{ await api.post('/api/tournament/'+id+'/seed-test', {}); renderDetail(id); }catch(e){ showMsg(e.message); } });
+}
+async function autoGroup(id){
+  const t = await api.get('/api/tournament/'+id);
+  try{
+    const d = await api.post('/api/tournament/'+id+'/auto-group', {});
+    const groups = d.groups.map((g,i)=>`<div class="match"><b style="color:var(--accent)">第 ${i+1} 组</b>（均分 ${g.avgMmr}，缺位 ${(g.missingRoles||[]).join('/')||'无'}）<br>
+    ${g.members.map(m=>esc(m.nickname)+' ('+m.mmr+')').join('、')}</div>`).join('');
+    $('#modal').innerHTML=`<h3>系统分组预览</h3><p class="muted">组间均分差 ${d.maxDiff}（${d.maxDiffOk?'均衡':'偏差较大'}）</p>${groups}
+    <div class="row" style="margin-top:12px"><button class="btn ok" onclick="confirmGroup(${id})">确认分组</button><button class="btn ghost" onclick="closeModal()">重新预览</button></div>`;
+    $('#modal-bg').classList.add('show');
+  }catch(e){ showMsg(e.message); }
+}
+async function confirmGroup(id){
+  try{ await api.post('/api/tournament/'+id+'/confirm-group', {groups:[]}); closeModal(); showMsg('分组完成', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+
+// ---------- 选人 ----------
+async function renderDraft(id){
+  const t = await api.get('/api/tournament/'+id);
+  if(t.status!=='draft' && t.status!=='battle'){ go('#/t/'+id); return; }
+  if(t.mode!=='captain' || !t.draftInfo){ go('#/t/'+id); return; }
+  const d = t.draftInfo;
+  const me = api.me;
+  const isAdmin = t.isAdmin;
+  const myTurn = d.currentCaptain && (me.userID===d.currentCaptain.userID || isAdmin);
+  let html = `<div class="row" style="margin-bottom:10px"><h2 style="flex:1">${esc(t.name)} · 选人</h2>
+  <span class="tag draft">第 ${d.round} 轮 · 第 ${d.capIdx+1} 顺位</span>
+  <button class="btn ghost small" onclick="go('#/t/${t.id}')">返回详情</button></div>`;
+
+  html += `<div class="card"><h3>当前选择：${d.done?'选人已完成':(d.currentCaptain?esc(d.currentCaptain.nickname):'—')}</h3>
+  <p class="muted">轮次 ${d.turn}/${d.totalPicks} ${d.done?'（已完成）':myTurn?'（轮到你了）':'（等待其他队长）'}</p>`;
+
+  if(!d.done){
+    if(myTurn){
+      html += `<div class="row" style="margin-top:10px"><b>可选队员（点击选择）：</b></div><div class="row" style="margin-top:8px">`;
+      if(!d.remainingPlayers.length) html += '<span class="muted">无</span>';
+      d.remainingPlayers.forEach(p=>{
+        html += `<button class="btn ghost small" onclick="pickPlayer(${t.id},${p.userID})">${esc(p.nickname)}（${p.mmr}，${(p.roles||[]).join('/')}）</button>`;
+      });
+      html += `</div>`;
+    }else{
+      html += `<p class="muted" style="margin-top:10px">轮到 ${esc(d.currentCaptain.nickname)} 选人，请等待。</p>`;
+    }
+  }
+  if(isAdmin && !d.done){
+    html += `<button class="btn danger small" style="margin-top:10px" onclick="resetDraft(${t.id})">重置选人（重排队长顺序）</button>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="card"><h3>队伍面板</h3>`;
+  d.picks.forEach((team,i)=>{
+    html += `<div class="match"><b style="color:var(--accent)">${esc((team.captain&&(team.captain.teamName||team.captain.nickname))||('第'+(i+1)+'队'))}战队</b>
+    <span class="muted">已选 ${team.players.length}/${t.K}</span>：
+    ${team.players.map(p=>esc(p.nickname)).join('、')||'<span class="muted">（尚未选人）</span>'}</div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="card"><h3>队长顺序</h3><p>${d.captainOrder.map((c,i)=>(i+1)+'. '+esc(c.nickname)+(i===d.capIdx?'（当前）':'')).join('　')}</p></div>`;
+  $('#view').innerHTML = html;
+}
+async function pickPlayer(id, pid){
+  try{ const d = await api.post('/api/tournament/'+id+'/pick', {playerUserID:pid}); renderDraft(id); }catch(e){ showMsg(e.message); }
+}
+async function resetDraft(id){
+  confirmBox('重置选人','将清空已选队员并重新随机队长顺序，确定？','重置', async()=>{ try{ await api.post('/api/tournament/'+id+'/reset-draft', {}); renderDraft(id); }catch(e){ showMsg(e.message); } });
+}
+
+// ---------- 赛程 ----------
+async function renderBracket(id){
+  const t = await api.get('/api/tournament/'+id);
+  if(t.status!=='battle' && t.status!=='finished'){ go('#/t/'+id); return; }
+  let html = `<div class="row" style="margin-bottom:10px"><h2 style="flex:1">${esc(t.name)} · 赛程</h2>
+  <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
+  <button class="btn ghost small" onclick="go('#/t/${t.id}')">返回详情</button></div>`;
+  if(t.champion) html += `<div class="card" style="border-color:var(--accent)"><h3>🏆 冠军：${esc(t.champion.name)}</h3></div>`;
+  const secs = {WB:'胜者组', LB:'败者组', GF:'总决赛'};
+  Object.keys(secs).forEach(stage=>{
+    const ms = t.matches.filter(m=>m.stage===stage);
+    if(!ms.length) return;
+    html += `<div class="bracket-section"><div class="bracket-title">${secs[stage]}</div>`;
+    ms.forEach(m=>{
+      const done = m.status==='done';
+      const aWin = done && m.winner===('U'+(m.teamAInfo?m.teamAInfo.userID:''));
+      html += `<div class="match"><div class="vs">
+        <div class="team ${done&&aWin?'win':''}">${esc(m.displayA)}${done?` <span class="score">${m.scoreA}</span>`:''}</div>
+        <span class="muted">${m.label||''} · ${m.bo}</span>
+        <div class="team ${done&&!aWin?'win':''}">${done?` <span class="score">${m.scoreB}</span>`:''}${esc(m.displayB)}</div>
+      </div>`;
+      if(m.status==='pending') html += `<div class="muted">${m.teamAInfo&&m.teamBInfo?'待记录结果':'等待对阵确定'}</div>`;
+      if(t.isAdmin && m.status!=='done'){
+        html += `<div class="row" style="margin-top:8px">
+          ${m.teamAInfo&&m.teamBInfo?`<button class="btn small" onclick="setResult(${t.id},${m.id})">记录结果</button>`:''}
+          <select class="small" id="bo-${m.id}" style="width:80px"><option>BO1</option><option>BO3</option><option>BO5</option></select>
+          <button class="btn ghost small" onclick="setBo(${t.id},${m.id})">设赛制</button></div>`;
+      }
+      if(t.isAdmin && m.status==='done'){
+        html += `<button class="btn ghost small" style="margin-top:8px" onclick="resetResult(${t.id},${m.id})">修正本场（级联重置后续）</button>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  $('#view').innerHTML = html;
+}
+async function setBo(id, mid){
+  try{ await api.post('/api/tournament/'+id+'/bo', {matchId:mid, bo:$('#bo-'+mid).value}); renderBracket(id); }catch(e){ showMsg(e.message); }
+}
+async function setResult(id, mid){
+  const t = await api.get('/api/tournament/'+id);
+  const m = t.matches.find(x=>x.id===mid);
+  $('#modal').innerHTML=`<h3>记录 ${esc(m.label||'本场')} 结果</h3><p class="muted">胜方：</p>
+  <button class="btn small" style="width:100%;margin-bottom:6px" onclick="saveResult(${id},${mid},'${m.teamAInfo.userID}')">${esc(m.displayA)}</button>
+  <button class="btn small" style="width:100%" onclick="saveResult(${id},${mid},'${m.teamBInfo.userID}')">${esc(m.displayB)}</button>`;
+  $('#modal-bg').classList.add('show');
+}
+async function saveResult(id, mid, uid){
+  try{ await api.post('/api/tournament/'+id+'/result', {matchId:mid, winner:'U'+uid}); closeModal(); renderBracket(id); }catch(e){ showMsg(e.message); }
+}
+async function resetResult(id, mid){
+  confirmBox('修正结果','将重置本场及所有后续比赛结果（冠军将清空），确定？','修正', async()=>{ try{ await api.post('/api/tournament/'+id+'/reset-result', {matchId:mid}); renderBracket(id); }catch(e){ showMsg(e.message); } });
+}
+
+// ---------- 管理员 ----------
+async function renderStaff(){
+  const me = api.me;
+  if(!me.isSuper){ showMsg('仅最高管理员可访问'); go('#/home'); return; }
+  const d = await api.get('/api/auth/staff');
+  const users = await api.get('/api/auth/users');
+  let html = `<div class="row" style="margin-bottom:14px"><h2 style="flex:1">管理员管理</h2><button class="btn ghost small" onclick="go('#/home')">返回</button></div>`;
+  html += `<div class="card"><h3>当前管理员</h3>`;
+  if(d.superAdmin) html += `<p>最高管理员：<b style="color:var(--accent)">${esc(d.superAdmin.nickname)}</b>（ID ${d.superAdmin.userID}）</p>`;
+  if(d.admins.length) html += `<p>管理员：${d.admins.map(a=>esc(a.nickname)+'（'+a.username+'）').join('、')}</p>`;
+  html += `</div>`;
+  html += `<div class="card"><h3>用户列表 <span class="muted">（${users.users.length} 人）</span></h3><table class="tbl">
+  <tr><th>昵称</th><th>用户名</th><th>ID</th><th>天梯分</th><th>位置</th><th>签名</th><th>角色</th><th></th></tr>`;
+  users.users.forEach(u=>{
+    const isSuper = d.superAdmin && d.superAdmin.userID===u.userID;
+    const isAdm = d.admins.some(a=>a.userID===u.userID);
+    html += `<tr><td>${esc(u.nickname)}</td><td>${esc(u.username)}</td><td>${u.userID}</td><td>${u.mmr}</td>
+    <td>${(u.roles||[]).join('/')}</td><td class="muted">${esc(u.signature||'')}</td>
+    <td>${isSuper?'<span class="tag" style="color:var(--accent)">超管</span>':isAdm?'<span class="tag">管理员</span>':'<span class="muted">普通</span>'}</td>
+    <td>${(!isSuper&&!isAdm)?`<button class="btn ghost small" onclick="addAdmin(${u.userID})">设为管理员</button>`:(!isSuper&&isAdm)?`<button class="btn danger small" onclick="removeAdmin(${u.userID})">移除</button>`:''}</td></tr>`;
+  });
+  html += `</table></div>`;
+  $('#view').innerHTML = html;
+}
+async function addAdmin(uid){ try{ await api.post('/api/auth/add-admin', {userID:uid}); renderStaff(); }catch(e){ showMsg(e.message); } }
+async function removeAdmin(uid){ try{ await api.post('/api/auth/remove-admin', {userID:uid}); renderStaff(); }catch(e){ showMsg(e.message); } }
+
+// ---------- 我的资料 ----------
+function renderProfile(){
+  const u = api.me;
+  $('#view').innerHTML = `<div class="card" style="max-width:520px;margin:0 auto">
+    <h3>我的资料</h3>
+    <p class="muted" style="margin-bottom:12px">用户名：${esc(u.username)}（ID ${u.userID}）</p>
+    <label class="muted">昵称</label><input id="p-nick" value="${esc(u.nickname)}" style="width:100%;margin-bottom:10px">
+    <label class="muted">天梯分（必填，1-20000）</label><input id="p-mmr" type="number" value="${u.mmr}" min="1" max="20000" style="width:100%;margin-bottom:10px">
+    <label class="muted">常玩位置（可多选）</label>
+    <div class="roles-chip" id="p-roles" style="margin:6px 0 10px">${[1,2,3,4,5].map(r=>`<span class="chip ${(u.roles||[]).includes(r)?'on':'off'}" data-r="${r}" onclick="toggleRole(${r})">${['','一号位','二号位','三号位','四号位','五号位'][r]}</span>`).join('')}</div>
+    <label class="muted">个人签名（最多 15 字）</label><input id="p-sig" value="${esc(u.signature||'')}" style="width:100%;margin-bottom:16px">
+    <button class="btn" style="width:100%" onclick="saveProfile()">保存资料</button></div>`;
+}
+function toggleRole(r){
+  const el=$('#p-roles').querySelector('[data-r="'+r+'"]');
+  const on = el.classList.contains('on');
+  el.classList.toggle('on', !on); el.classList.toggle('off', on);
+}
+async function saveProfile(){
+  const roles = [...$('#p-roles').querySelectorAll('.chip.on')].map(x=>Number(x.dataset.r));
+  const mmrRaw = $('#p-mmr').value.trim();
+  if(!mmrRaw){ showMsg('请填写天梯分'); return; }
+  const mmr = Number(mmrRaw);
+  if(!Number.isInteger(mmr) || mmr < 1 || mmr > 20000){ showMsg('天梯分需在 1-20000 之间'); return; }
+  try{
+    api.me = await api.post('/api/auth/profile', {nickname:$('#p-nick').value.trim(), mmr, roles, signature:$('#p-sig').value.trim()});
+    showMsg('资料已保存', true); renderTopbar();
+  }catch(e){ showMsg(e.message); }
+}
+
+boot();
+</script>
+</body>
+</html>

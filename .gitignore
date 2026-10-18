@@ -1,0 +1,24 @@
+# 二进制与构建产物
+release/
+*.exe
+*.bin
+
+# 数据库（含用户数据与密码哈希，严禁推送）
+*.db
+
+# 本地运行产物与日志
+*.log
+*.out
+deploy_out*.txt
+chrome_*.txt
+pids.txt
+remote_page.html
+
+# .e2e 验证脚本的临时输出
+.e2e/*.txt
+.e2e/*.out
+.e2e/*.log
+
+# 本地环境配置
+.env
+*.env.local

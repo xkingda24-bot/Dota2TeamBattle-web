@@ -1,0 +1,16 @@
+[Unit]
+Description=Dota2 Tournament Service (比赛全生命周期)
+After=network.target dota2-auth.service
+Requires=dota2-auth.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dota2
+EnvironmentFile=/opt/dota2/etc/tournament.env
+ExecStart=/opt/dota2/bin/dota2-tournament
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

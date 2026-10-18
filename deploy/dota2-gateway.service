@@ -1,0 +1,16 @@
+[Unit]
+Description=Dota2 Gateway (对外入口, 托管前端 + JWT + 反代)
+After=network.target dota2-auth.service dota2-tournament.service
+Requires=dota2-auth.service dota2-tournament.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dota2
+EnvironmentFile=/opt/dota2/etc/gateway.env
+ExecStart=/opt/dota2/bin/dota2-gateway
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

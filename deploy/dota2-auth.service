@@ -1,0 +1,15 @@
+[Unit]
+Description=Dota2 Auth Service (用户名密码 + JWT)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dota2
+EnvironmentFile=/opt/dota2/etc/auth.env
+ExecStart=/opt/dota2/bin/dota2-auth
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
