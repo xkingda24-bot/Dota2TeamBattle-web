@@ -874,7 +874,7 @@ func (a *App) setTeamName(w http.ResponseWriter, r *http.Request, uid int) {
 		return
 	}
 	targetUID := req.UserID
-	if targetUID <= 0 {
+	if targetUID == 0 {
 		targetUID = uid
 	}
 	isAdminFlag := a.adminClient.IsAdmin(uid)
