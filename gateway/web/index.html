@@ -455,7 +455,7 @@ async function renderDetail(id){
     html += `<div class="card"><h3>管理员操作</h3><div class="row" style="gap:8px">`;
     if(t.status==='registration'){
       if(t.mode==='auto') html += `<button class="btn" onclick="autoGroup(${t.id})">系统分组预览</button>`;
-      else html += `<button class="btn" onclick="startDraft(${t.id})" ${t.captainFilled<t.captainTotal||t.playerFilled<t.playerTotal?'disabled':''}>开始选人（随机排序队长）</button>`;
+      else html += `<button class="btn" onclick="startDraft(${t.id})" ${t.captainFilled<t.captainTotal||t.playerFilled<t.playerTotal?'disabled':''}>开始选人（随机排序队长+蛇形选人）</button>`;
       html += `<button class="btn ghost" onclick="editConfig(${t.id})">修改比赛配置</button>`;
       html += `<button class="btn danger" onclick="delTournament(${t.id})">删除比赛</button>`;
     }
