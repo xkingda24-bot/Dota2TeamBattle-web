@@ -834,6 +834,18 @@ func (a *App) moveRegistration(w http.ResponseWriter, r *http.Request, uid int) 
 }
 
 /* 设置队伍名称（队长本人/组长本人或管理员） */
+/* 预设队伍图标（Dota2 相关 + 趣味图标，前后端一致） */
+var teamIcons = []string{"⚔️", "🛡️", "🐉", "🐺", "🦇", "🔥", "❄️", "⚡", "💀", "👑", "🏹", "🗡️", "🪓", "🐍", "☠️", "👹", "🧙", "🧝"}
+
+func inTeamIcons(s string) bool {
+	for _, i := range teamIcons {
+		if i == s {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *App) setTeamName(w http.ResponseWriter, r *http.Request, uid int) {
 	id, ok := a.pathID(r)
 	if !ok {
@@ -848,11 +860,17 @@ func (a *App) setTeamName(w http.ResponseWriter, r *http.Request, uid int) {
 	var req struct {
 		UserID   int    `json:"userID"`
 		TeamName string `json:"teamName"`
+		TeamIcon string `json:"teamIcon"`
 	}
 	json.NewDecoder(r.Body).Decode(&req)
 	teamName := strings.TrimSpace(req.TeamName)
 	if len([]rune(teamName)) > 10 {
 		writeErr(w, http.StatusBadRequest, "队伍名称最多 10 个字")
+		return
+	}
+	teamIcon := strings.TrimSpace(req.TeamIcon)
+	if teamIcon != "" && !inTeamIcons(teamIcon) {
+		writeErr(w, http.StatusBadRequest, "图标不在支持范围内")
 		return
 	}
 	targetUID := req.UserID
@@ -873,6 +891,7 @@ func (a *App) setTeamName(w http.ResponseWriter, r *http.Request, uid int) {
 		for i := range t.Teams {
 			if t.Teams[i].Captain.UserID == targetUID {
 				t.Teams[i].Captain.TeamName = teamName
+				t.Teams[i].Captain.TeamIcon = teamIcon
 				found = true
 				break
 			}
@@ -882,15 +901,30 @@ func (a *App) setTeamName(w http.ResponseWriter, r *http.Request, uid int) {
 			return
 		}
 	} else {
-		if t.Status != "registration" {
-			writeErr(w, http.StatusBadRequest, "只有报名阶段可以设置队伍名称")
+		if t.Status != "registration" && t.Status != "draft" && t.Status != "battle" {
+			writeErr(w, http.StatusBadRequest, "只有报名或选人阶段可以设置队伍名称")
 			return
 		}
 		found := false
 		for i := range t.Registrations {
 			if t.Registrations[i].UserID == targetUID && t.Registrations[i].Role == "captain" {
 				t.Registrations[i].TeamName = teamName
+				t.Registrations[i].TeamIcon = teamIcon
 				found = true
+				break
+			}
+		}
+		for i := range t.CaptainOrder {
+			if t.CaptainOrder[i].UserID == targetUID {
+				t.CaptainOrder[i].TeamName = teamName
+				t.CaptainOrder[i].TeamIcon = teamIcon
+				break
+			}
+		}
+		for i := range t.Teams {
+			if t.Teams[i].Captain.UserID == targetUID {
+				t.Teams[i].Captain.TeamName = teamName
+				t.Teams[i].Captain.TeamIcon = teamIcon
 				break
 			}
 		}

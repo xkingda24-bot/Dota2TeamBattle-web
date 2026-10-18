@@ -50,7 +50,7 @@ func (a *App) startDraft(w http.ResponseWriter, r *http.Request, uid int) {
 	order := []CaptainInfo{}
 	for _, c := range shuffleRegs(captains) {
 		order = append(order, CaptainInfo{
-			UserID: c.UserID, Nickname: c.Nickname, TeamName: c.TeamName,
+			UserID: c.UserID, Nickname: c.Nickname, TeamName: c.TeamName, TeamIcon: c.TeamIcon,
 			MMR: c.MMR, Roles: c.Roles, Signature: c.Signature,
 		})
 	}
@@ -175,7 +175,7 @@ func (a *App) resetDraft(w http.ResponseWriter, r *http.Request, uid int) {
 	order := []CaptainInfo{}
 	for _, c := range shuffleRegs(captains) {
 		order = append(order, CaptainInfo{
-			UserID: c.UserID, Nickname: c.Nickname, TeamName: c.TeamName,
+			UserID: c.UserID, Nickname: c.Nickname, TeamName: c.TeamName, TeamIcon: c.TeamIcon,
 			MMR: c.MMR, Roles: c.Roles, Signature: c.Signature,
 		})
 	}

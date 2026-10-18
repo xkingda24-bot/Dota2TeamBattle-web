@@ -72,6 +72,8 @@ h3{font-size:15px;font-weight:700}
 .pick-box.active{border-color:var(--accent);background:#221a0e}
 .empty{text-align:center;color:var(--muted);padding:30px 0}
 .fill{font-size:15px;font-weight:700;color:var(--accent)}
+.icon-pick{display:inline-block;padding:4px 6px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:18px;line-height:1.2;transition:border-color .12s,background .12s}
+.icon-pick.sel{border-color:var(--accent);background:rgba(240,161,43,.18)}
 .footer{margin-top:30px;text-align:center;color:var(--muted);font-size:12px}
 .hidden{display:none!important}
 .roles-chip{display:inline-flex;gap:6px;flex-wrap:wrap}
@@ -125,6 +127,7 @@ const api = {
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-CN',{hour12:false}) : '';
 const MODE_CN = {captain:'队长选人', auto:'系统分组'};
+const TEAM_ICONS = ['⚔️','🛡️','🐉','🐺','🦇','🔥','❄️','⚡','💀','👑','🏹','🗡️','🪓','🐍','☠️','👹','🧙','🧝'];
 const STATUS_CN = {registration:'报名中', draft:'选人/分组', battle:'对战', finished:'已结束'};
 function showMsg(msg, ok){ const m=$('#modal-bg'); $('#modal').innerHTML='<h3>'+(ok?'完成':'提示')+'</h3><p style="margin:10px 0">'+esc(msg)+'</p><button class="btn" onclick="closeModal()">确定</button>'; m.classList.add('show'); }
 function closeModal(){ $('#modal-bg').classList.remove('show'); }
@@ -349,8 +352,12 @@ async function renderDetail(id){
   if(t.status==='registration'){
     html += `<div class="card"><h3>报名</h3>`;
     if(t.myReg){
-      html += `<p>你已报名：<span class="role-badge ${t.myReg.role==='captain'?'role-captain':t.myReg.role==='waitlist'?'role-waitlist':'role-player'}">${t.myReg.role==='captain'?'队长':t.myReg.role==='waitlist'?'替补':'队员'}</span></p>
-      <div class="row" style="margin-top:8px"><button class="btn danger small" onclick="doCancel(${t.id})">取消报名</button></div>`;
+      html += `<p>你已报名：<span class="role-badge ${t.myReg.role==='captain'?'role-captain':t.myReg.role==='waitlist'?'role-waitlist':'role-player'}">${t.myReg.role==='captain'?'队长':t.myReg.role==='waitlist'?'替补':'队员'}</span></p>`;
+      if(t.myReg.role==='captain'){
+        html += `<div class="row" style="margin-top:8px"><b>我的队伍：</b><span style="font-size:18px">${esc(t.myReg.teamIcon||'')}</span> <b>${esc(t.myReg.teamName||'（未设置队名）')}</b>
+        <button class="btn ghost small" onclick="setTeamName(${t.id},${me.userID},'${esc(t.myReg.teamIcon||'')}')">设置队名图标</button></div>`;
+      }
+      html += `<div class="row" style="margin-top:8px"><button class="btn danger small" onclick="doCancel(${t.id})">取消报名</button></div>`;
     }else{
       html += `<div class="row" style="gap:8px">
         ${t.mode==='captain'?`<button class="btn" onclick="doTournamentRegister(${t.id},'captain')" ${t.captainFilled>=t.captainTotal?'disabled':''}>报名队长</button>`:''}
@@ -369,7 +376,7 @@ async function renderDetail(id){
   const regRows = (list) => {
     if(!list.length) return '<p class="muted" style="margin:6px 0">暂无</p>';
     return `<table class="tbl"><tr><th>昵称</th><th>天梯分</th><th>位置</th><th>签名</th>${t.isAdmin?'<th></th>':''}</tr>` + list.map(r=>`<tr>
-      <td>${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
+      <td>${r.teamIcon?`<span style="font-size:15px">${esc(r.teamIcon)}</span> `:''}${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
       <td>${r.mmr}</td><td>${(r.roles||[]).join('/')}</td><td class="muted">${esc(r.signature||'')}</td>
       ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`).join('') + `</table>`;
   };
@@ -382,11 +389,11 @@ async function renderDetail(id){
   if(t.teams && t.teams.length){
     html += `<div class="card"><h3>队伍</h3>`;
     t.teams.forEach((team,i)=>{
-      html += `<div class="match"><b style="color:var(--accent)">${esc(team.captain.teamName||team.captain.nickname+'战队')}</b> <span class="muted">队长 ${esc(team.captain.nickname)}</span>
+      html += `<div class="match"><b style="color:var(--accent)">${esc(team.captain.teamIcon||'')} ${esc(team.captain.teamName||team.captain.nickname+'战队')}</b> <span class="muted">队长 ${esc(team.captain.nickname)}</span>
       <span class="muted">：${team.players.map(p=>esc(p.nickname)).join('、')}</span>`;
       if(t.status==='draft'||t.status==='battle'){
         if(me.userID===team.captain.userID||t.isAdmin){
-          html += ` <button class="btn ghost small" onclick="setTeamName(${t.id},${team.captain.userID})">设置队名</button>`;
+          html += ` <button class="btn ghost small" onclick="setTeamName(${t.id},${team.captain.userID},'${esc(team.captain.teamIcon||'')}')">设置队名图标</button>`;
         }
       }
       html += `</div>`;
@@ -501,12 +508,22 @@ async function saveConfig(id){
     closeModal(); renderDetail(id);
   }catch(e){ showMsg(e.message); }
 }
-async function setTeamName(id, uid){
-  $('#modal').innerHTML=`<h3>设置队伍名称</h3><input id="tn" placeholder="队伍名称（最多 10 字）" style="width:100%;margin:10px 0"><button class="btn" style="width:100%" onclick="saveTeamName(${id},${uid})">保存</button>`;
+let teamIconSel = '';
+async function setTeamName(id, uid, curIcon){
+  teamIconSel = curIcon || '';
+  $('#modal').innerHTML=`<h3>设置队伍名称与图标</h3>
+  <input id="tn" placeholder="队伍名称（最多 10 字）" style="width:100%;margin:10px 0">
+  <div class="row" style="gap:6px;margin-bottom:12px">${TEAM_ICONS.map(i=>`<span class="icon-pick${i===teamIconSel?' sel':''}" data-ic="${i}" onclick="selIcon(this)">${i}</span>`).join('')}</div>
+  <button class="btn" style="width:100%" onclick="saveTeamName(${id},${uid})">保存</button>`;
   $('#modal-bg').classList.add('show');
 }
+function selIcon(el){
+  teamIconSel = el.getAttribute('data-ic');
+  document.querySelectorAll('.icon-pick').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+}
 async function saveTeamName(id, uid){
-  try{ await api.post('/api/tournament/'+id+'/team-name', {userID:uid, teamName:$('#tn').value.trim()}); closeModal(); renderDetail(id); }catch(e){ showMsg(e.message); }
+  try{ await api.post('/api/tournament/'+id+'/team-name', {userID:uid, teamName:$('#tn').value.trim(), teamIcon:teamIconSel}); closeModal(); renderDetail(id); }catch(e){ showMsg(e.message); }
 }
 async function setSeeding(id){
   const t = await api.get('/api/tournament/'+id);
@@ -605,11 +622,11 @@ async function renderDraft(id){
   const me = api.me;
   const isAdmin = t.isAdmin;
   const myTurn = d.currentCaptain && (me.userID===d.currentCaptain.userID || isAdmin);
-  let html = `<div class="row" style="margin-bottom:10px"><h2 style="flex:1">${esc(t.name)} · 选人</h2>
+  let html = `<div class="row" style="margin-bottom:10px"><h2 style="flex:1">当前比赛正在选人</h2>
   <span class="tag draft">第 ${d.round} 轮 · 第 ${d.capIdx+1} 顺位</span>
   <button class="btn ghost small" onclick="go('#/t/${t.id}')">返回详情</button></div>`;
 
-  html += `<div class="card"><h3>当前选择：${d.done?'选人已完成':(d.currentCaptain?esc(d.currentCaptain.nickname):'—')}</h3>
+  html += `<div class="card"><h3>${d.done?'选人已完成':(d.currentCaptain?`给我${esc(d.currentCaptain.teamName||('第'+(d.capIdx+1)+'队'))} 队长${esc(d.currentCaptain.nickname)} 请挑选英雄`:'—')}</h3>
   <p class="muted">轮次 ${d.turn}/${d.totalPicks} ${d.done?'（已完成）':myTurn?'（轮到你了）':'（等待其他队长）'}</p>`;
 
   if(!d.done){
@@ -631,13 +648,13 @@ async function renderDraft(id){
 
   html += `<div class="card"><h3>队伍面板</h3>`;
   d.picks.forEach((team,i)=>{
-    html += `<div class="match"><b style="color:var(--accent)">${esc((team.captain&&(team.captain.teamName||team.captain.nickname))||('第'+(i+1)+'队'))}战队</b>
+    html += `<div class="match"><b style="color:var(--accent)">${esc((team.captain&&team.captain.teamIcon)||'')} ${esc((team.captain&&(team.captain.teamName||team.captain.nickname))||('第'+(i+1)+'队'))}战队</b>
     <span class="muted">已选 ${team.players.length}/${t.K}</span>：
     ${team.players.map(p=>esc(p.nickname)).join('、')||'<span class="muted">（尚未选人）</span>'}</div>`;
   });
   html += `</div>`;
 
-  html += `<div class="card"><h3>队长顺序</h3><p>${d.captainOrder.map((c,i)=>(i+1)+'. '+esc(c.nickname)+(i===d.capIdx?'（当前）':'')).join('　')}</p></div>`;
+  html += `<div class="card"><h3>队长顺序</h3><p>${d.captainOrder.map((c,i)=>(i+1)+'. '+esc(c.teamIcon||'')+' '+esc(c.nickname)+(i===d.capIdx?'（当前）':'')).join('　')}</p></div>`;
   $('#view').innerHTML = html;
 }
 async function pickPlayer(id, pid){

@@ -18,6 +18,7 @@ type Registration struct {
 	Roles     []int    `json:"roles"`
 	Signature string   `json:"signature"`
 	TeamName  string   `json:"teamName,omitempty"`
+	TeamIcon  string   `json:"teamIcon,omitempty"`
 }
 
 // CaptainInfo 队长信息（选人顺序中的队长）
@@ -25,6 +26,7 @@ type CaptainInfo struct {
 	UserID    int      `json:"userID"`
 	Nickname  string   `json:"nickname"`
 	TeamName  string   `json:"teamName,omitempty"`
+	TeamIcon  string   `json:"teamIcon,omitempty"`
 	MMR       int      `json:"mmr"`
 	Roles     []int    `json:"roles"`
 	Signature string   `json:"signature"`
