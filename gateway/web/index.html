@@ -297,7 +297,7 @@ async function renderDetail(id){
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   const t = await api.get('/api/tournament/'+id);
   // 需求 4.1：报名阶段，未报名且本机未通过暗号 → 先弹暗号验证，通过后才能进入报名页
-  if(t.status==='registration' && !t.myReg && !t.isAdmin && !localStorage.getItem('d2_passed_'+id)){
+  if(t.status==='registration' && !t.myReg && !localStorage.getItem('d2_passed_'+id)){
     showSecretGate(id);
     return;
   }
@@ -410,8 +410,14 @@ async function checkSecretGate(id){
       closeModal();
       renderDetail(id);
     }else{
-      showMsg('暗号错误，无法进入报名');
-      const el=$('#gate-secret'); if(el) el.focus();
+      $('#modal').innerHTML = `<h3>输入报名暗号</h3>
+        <label class="muted" style="color:var(--danger);margin-top:4px">暗号错误，请重新输入</label>
+        <input id="gate-secret" placeholder="报名暗号" style="width:100%;margin-top:6px">
+        <div class="row" style="margin-top:12px">
+          <button class="btn ghost" onclick="closeModal(); go('#/home')">返回</button>
+          <button class="btn" style="flex:1" onclick="checkSecretGate(${id})">验证</button>
+        </div>`;
+      setTimeout(()=>{ const el=$('#gate-secret'); if(el) el.focus(); }, 60);
     }
   }catch(e){ showMsg(e.message); }
 }
