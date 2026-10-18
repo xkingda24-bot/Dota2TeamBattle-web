@@ -261,8 +261,16 @@ async function renderHome(){
     <button class="btn ok" style="margin-top:8px" onclick="initSuper()">我成为最高管理员</button></div>`;
   }
   html += `<div class="card"><h3>今天的比赛（${d.today.length}）</h3>` + cardList(d.today, d) + `</div>`;
-  html += `<div class="card"><h3>历史比赛</h3>` + cardList(d.older, d) + `</div>`;
+  html += `<div class="card"><h3 style="cursor:pointer;user-select:none" onclick="toggleHist()">历史比赛 <span id="hist-arrow">▸</span></h3>
+    <div id="hist-body" style="display:none">` + cardList(d.older, d) + `</div></div>`;
   $('#view').innerHTML = html;
+}
+function toggleHist(){
+  const body = document.getElementById('hist-body');
+  const arrow = document.getElementById('hist-arrow');
+  const show = body.style.display === 'none';
+  body.style.display = show ? 'block' : 'none';
+  arrow.textContent = show ? '▾' : '▸';
 }
 function cardList(list, d){
   if(!list || !list.length) return '<div class="empty">暂无比赛</div>';
