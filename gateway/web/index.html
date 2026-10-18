@@ -376,8 +376,8 @@ async function renderDetail(id){
   id = Number(String(id).replace(/\D/g,'')) || 0;  // 归一化 hash 传入的 id（如 '/12' → 12）
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   const t = await api.get('/api/tournament/'+id);
-  // 需求 4.1：报名阶段，未报名且本机未通过比赛密码 → 先弹窗验证，通过后才能进入报名页
-  if(t.status==='registration' && !t.myReg && !localStorage.getItem('d2_passed_'+id)){
+  // 需求 4.1：报名阶段，未报名且非管理员且本机未通过比赛密码 → 先弹窗验证（管理员/创建者已在创建表单填过密码，不再弹窗）
+  if(t.status==='registration' && !t.myReg && !t.isAdmin && !localStorage.getItem('d2_passed_'+id)){
     showSecretGate(id);
     return;
   }
@@ -401,10 +401,11 @@ async function renderDetail(id){
       }
       html += `<div class="row" style="margin-top:8px"><button class="btn danger small" onclick="doCancel(${t.id})">取消报名</button></div>`;
     }else{
+      const preset = t.isAdmin && t.secret ? ('&quot;'+esc(t.secret)+'&quot;') : 'null';
       html += `<div class="row" style="gap:8px">
-        ${t.mode==='captain'?`<button class="btn" onclick="doTournamentRegister(${t.id},'captain')" ${t.captainFilled>=t.captainTotal?'disabled':''}>报名队长</button>`:''}
-        <button class="btn" onclick="doTournamentRegister(${t.id},'player')">报名队员</button>
-        ${t.waitLimit>0?`<button class="btn ghost" onclick="doTournamentRegister(${t.id},'waitlist')" ${t.waitlistFilled>=t.waitLimit?'disabled':''}>报名替补</button>`:''}</div>`;
+        ${t.mode==='captain'?`<button class="btn" onclick="doTournamentRegister(${t.id},'captain',${preset})" ${t.captainFilled>=t.captainTotal?'disabled':''}>报名队长</button>`:''}
+        <button class="btn" onclick="doTournamentRegister(${t.id},'player',${preset})">报名队员</button>
+        ${t.waitLimit>0?`<button class="btn ghost" onclick="doTournamentRegister(${t.id},'waitlist',${preset})" ${t.waitlistFilled>=t.waitLimit?'disabled':''}>报名替补</button>`:''}</div>`;
     }
     html += `</div>`;
   }
@@ -514,8 +515,8 @@ async function checkSecretGate(id){
     }
   }catch(e){ showMsg(e.message); }
 }
-async function doTournamentRegister(id, role){
-  const secret = localStorage.getItem('d2_secret_'+id);
+async function doTournamentRegister(id, role, preset){
+  const secret = preset || localStorage.getItem('d2_secret_'+id);
   if(!secret){ showSecretGate(id); return; }
   try{
     const d = await api.post('/api/tournament/'+id+'/register', {role, secret});
