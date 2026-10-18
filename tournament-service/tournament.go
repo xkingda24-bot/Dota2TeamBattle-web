@@ -792,6 +792,42 @@ func (a *App) moveRegistration(w http.ResponseWriter, r *http.Request, uid int) 
 		return
 	}
 	cur := t.Registrations[idx]
+	if cur.Role == "captain" {
+		// 队长转队员：队员满则自动转替补
+		if toRole != "player" {
+			writeErr(w, http.StatusBadRequest, "队长只能转为队员")
+			return
+		}
+		players, waitlist := 0, 0
+		for _, reg := range t.Registrations {
+			if reg.Role == "player" {
+				players++
+			} else if reg.Role == "waitlist" {
+				waitlist++
+			}
+		}
+		toWaitlist := false
+		if players >= t.N*t.K {
+			if t.WaitLimit <= 0 || waitlist >= t.WaitLimit {
+				writeErr(w, http.StatusBadRequest, "队员与替补名额均已满，无法转出队长")
+				return
+			}
+			toWaitlist = true
+		}
+		if toWaitlist {
+			t.Registrations[idx].Role = "waitlist"
+		} else {
+			t.Registrations[idx].Role = "player"
+		}
+		a.lock(t.ID).Lock()
+		defer a.lock(t.ID).Unlock()
+		if err := a.store.Save(t); err != nil {
+			writeErr(w, http.StatusInternalServerError, "服务异常")
+			return
+		}
+		writeOK(w, map[string]interface{}{"moved": true, "toWaitlist": toWaitlist})
+		return
+	}
 	if cur.Role != "player" && cur.Role != "waitlist" {
 		writeErr(w, http.StatusBadRequest, "只能调整队员/替补")
 		return

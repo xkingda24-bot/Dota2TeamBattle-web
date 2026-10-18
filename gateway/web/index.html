@@ -423,7 +423,7 @@ async function renderDetail(id){
     return `<table class="tbl"><tr><th>昵称</th><th>天梯分</th><th>位置</th><th>签名</th>${t.isAdmin?'<th></th>':''}</tr>` + list.map(r=>`<tr>
       <td>${r.teamIcon?`<span style="font-size:15px">${esc(r.teamIcon)}</span> `:''}${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
       <td>${r.mmr}</td><td>${(r.roles||[]).join('/')}</td><td class="muted">${esc(r.signature||'')}</td>
-      ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`).join('') + `</table>`;
+      ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${r.role==='captain'?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'player')">转队员</button>`:''}${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`).join('') + `</table>`;
   };
   const teamRows = () => {
     if(t.teams && t.teams.length){
@@ -541,7 +541,11 @@ async function removeReg(id, uid){
   confirmBox('移除报名','确定移除该用户的报名？','移除', async()=>{ try{ await api.post('/api/tournament/'+id+'/remove-reg', {userID:uid}); renderDetail(id); }catch(e){ showMsg(e.message); } });
 }
 async function moveReg(id, uid, toRole){
-  try{ await api.post('/api/tournament/'+id+'/move-reg', {userID:uid, toRole}); renderDetail(id); }catch(e){ showMsg(e.message); }
+  try{
+    const d = await api.post('/api/tournament/'+id+'/move-reg', {userID:uid, toRole});
+    if(d && d.toWaitlist) showMsg('队员已满，已自动转为替补', true);
+    renderDetail(id);
+  }catch(e){ showMsg(e.message); }
 }
 async function startDraft(id){
   try{ await api.post('/api/tournament/'+id+'/start-draft', {}); showMsg('选人已开始', true); renderDetail(id); }catch(e){ showMsg(e.message); }
