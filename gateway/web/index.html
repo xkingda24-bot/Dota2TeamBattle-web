@@ -48,6 +48,11 @@ h3{font-size:15px;font-weight:700}
 .dot-pop button{display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;color:var(--text);cursor:pointer;font-size:14px;white-space:nowrap}
 .dot-pop button:hover{background:var(--panel2)}
 .dot-pop .danger{color:#f85149}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-top:10px}
+.tab{background:transparent;border:none;color:var(--muted);padding:9px 16px;cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-pane{margin-top:10px}
 .muted{color:var(--muted);font-size:12px}
 .tag{display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:12px;background:var(--panel2);border:1px solid var(--border)}
 .tag.reg{color:var(--ok);border-color:var(--ok);background:rgba(63,185,80,.12)}
@@ -163,6 +168,12 @@ function logout(){ api.clear(); go('#/login'); }
 
 // ---------- 路由 ----------
 let refreshTimer = null;
+let regTab = 'cap'; // 报名阶段名单 Tabs 当前页（cap/pla/wait）
+function switchRegTab(btn, key){
+  regTab = key;
+  document.querySelectorAll('.tabs .tab').forEach(b => b.classList.toggle('on', b === btn));
+  ['cap','pla','wait'].forEach(k => { const p = document.getElementById('tab-'+k); if(p) p.style.display = k === key ? '' : 'none'; });
+}
 window.addEventListener('hashchange', route);
 async function route(){
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
@@ -398,11 +409,13 @@ async function renderDetail(id){
     html += `</div>`;
   }
 
-  // 名单
+  // 名单（Tabs 标签页）
   const caps = t.registrations.filter(r=>r.role==='captain');
   const plays = t.registrations.filter(r=>r.role==='player');
   const waits = t.registrations.filter(r=>r.role==='waitlist');
-  html += `<div class="card"><h3>名单 <span class="fill">队长 ${caps.length}/${t.captainTotal} · 队员 ${plays.length}/${t.playerTotal} · 替补 ${waits.length}/${t.waitLimit}</span></h3>`;
+  const hasCap = t.mode!=='auto';
+  if(!hasCap && regTab==='cap') regTab = 'pla';
+  html += `<div class="card"><h3>名单</h3>`;
   if(t.secret && t.isAdmin) html += `<p class="muted">比赛密码：<b style="color:var(--accent)">${esc(t.secret)}</b>（仅管理员可见）</p>`;
   const regRows = (list) => {
     if(!list.length) return '<p class="muted" style="margin:6px 0">暂无</p>';
@@ -411,9 +424,14 @@ async function renderDetail(id){
       <td>${r.mmr}</td><td>${(r.roles||[]).join('/')}</td><td class="muted">${esc(r.signature||'')}</td>
       ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`).join('') + `</table>`;
   };
-  if(t.mode!=='auto') html += `<div style="margin:8px 0"><b>队长</b>${regRows(caps)}</div>`;
-  html += `<div style="margin:8px 0"><b>队员</b>${regRows(plays)}</div>`;
-  if(t.waitLimit>0) html += `<div style="margin:8px 0"><b>替补</b>${regRows(waits)}</div>`;
+  html += `<div class="tabs">`;
+  if(hasCap) html += `<button type="button" class="tab ${regTab==='cap'?'on':''}" onclick="switchRegTab(this,'cap')">队长（${caps.length}/${t.captainTotal}）</button>`;
+  html += `<button type="button" class="tab ${regTab==='pla'?'on':''}" onclick="switchRegTab(this,'pla')">队员（${plays.length}/${t.playerTotal}）</button>`;
+  if(t.waitLimit>0) html += `<button type="button" class="tab ${regTab==='wait'?'on':''}" onclick="switchRegTab(this,'wait')">替补（${waits.length}/${t.waitLimit}）</button>`;
+  html += `</div>`;
+  if(hasCap) html += `<div class="tab-pane" id="tab-cap"${regTab==='cap'?'':' style="display:none"'}>${regRows(caps)}</div>`;
+  html += `<div class="tab-pane" id="tab-pla"${regTab==='pla'?'':' style="display:none"'}>${regRows(plays)}</div>`;
+  if(t.waitLimit>0) html += `<div class="tab-pane" id="tab-wait"${regTab==='wait'?'':' style="display:none"'}>${regRows(waits)}</div>`;
   html += `</div>`;
 
   // 队伍展示（分组后）
