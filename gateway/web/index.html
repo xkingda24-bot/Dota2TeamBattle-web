@@ -330,9 +330,10 @@ async function renderDetail(id){
       html += `<p>你已报名：<span class="role-badge ${t.myReg.role==='captain'?'role-captain':t.myReg.role==='waitlist'?'role-waitlist':'role-player'}">${t.myReg.role==='captain'?'队长':t.myReg.role==='waitlist'?'替补':'队员'}</span></p>
       <div class="row" style="margin-top:8px"><button class="btn danger small" onclick="doCancel(${t.id})">取消报名</button></div>`;
     }else{
-      html += `<div class="row">
-        <select id="r-role" style="width:120px"><option value="player">队员</option>${t.mode==='captain'?'<option value="captain">队长</option>':''}${t.waitLimit>0?'<option value="waitlist">替补</option>':''}</select>
-        <button class="btn" onclick="doTournamentRegister(${t.id})">报名</button></div>`;
+      html += `<div class="row" style="gap:8px">
+        ${t.mode==='captain'?`<button class="btn" onclick="doTournamentRegister(${t.id},'captain')" ${t.captainFilled>=t.captainTotal?'disabled':''}>报名队长</button>`:''}
+        <button class="btn" onclick="doTournamentRegister(${t.id},'player')">报名队员</button>
+        ${t.waitLimit>0?`<button class="btn ghost" onclick="doTournamentRegister(${t.id},'waitlist')" ${t.waitlistFilled>=t.waitLimit?'disabled':''}>报名替补</button>`:''}</div>`;
     }
     html += `</div>`;
   }
@@ -343,14 +344,17 @@ async function renderDetail(id){
   const waits = t.registrations.filter(r=>r.role==='waitlist');
   html += `<div class="card"><h3>名单 <span class="muted">队长 ${caps.length}/${t.captainTotal} · 队员 ${plays.length}/${t.playerTotal} · 替补 ${waits.length}/${t.waitLimit}</span></h3>`;
   if(t.secret && t.isAdmin) html += `<p class="muted">比赛密码：<b style="color:var(--accent)">${esc(t.secret)}</b>（仅管理员可见）</p>`;
-  html += `<table class="tbl"><tr><th>昵称</th><th>角色</th><th>天梯分</th><th>位置</th><th>签名</th>${t.isAdmin?'<th></th>':''}</tr>`;
-  [...caps.map(r=>[r,'captain']), ...plays.map(r=>[r,'player']), ...waits.map(r=>[r,'waitlist'])].forEach(([r])=>{
-    html += `<tr><td>${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
-    <td><span class="role-badge ${r.role==='captain'?'role-captain':r.role==='waitlist'?'role-waitlist':'role-player'}">${r.role==='captain'?'队长':r.role==='waitlist'?'替补':'队员'}</span></td>
-    <td>${r.mmr}</td><td>${(r.roles||[]).join('/')}</td><td class="muted">${esc(r.signature||'')}</td>
-    ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`;
-  });
-  html += `</table></div>`;
+  const regRows = (list) => {
+    if(!list.length) return '<p class="muted" style="margin:6px 0">暂无</p>';
+    return `<table class="tbl"><tr><th>昵称</th><th>天梯分</th><th>位置</th><th>签名</th>${t.isAdmin?'<th></th>':''}</tr>` + list.map(r=>`<tr>
+      <td>${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
+      <td>${r.mmr}</td><td>${(r.roles||[]).join('/')}</td><td class="muted">${esc(r.signature||'')}</td>
+      ${t.isAdmin?`<td><button class="btn ghost small" onclick="removeReg(${t.id},${r.userID})">移除</button>${(r.role==='player'||r.role==='waitlist')?` <button class="btn ghost small" onclick="moveReg(${t.id},${r.userID},'${r.role==='player'?'waitlist':'player'}')">${r.role==='player'?'转替补':'转队员'}</button>`:''}</td>`:''}</tr>`).join('') + `</table>`;
+  };
+  if(t.mode!=='auto') html += `<div style="margin:8px 0"><b>队长</b>${regRows(caps)}</div>`;
+  html += `<div style="margin:8px 0"><b>队员</b>${regRows(plays)}</div>`;
+  if(t.waitLimit>0) html += `<div style="margin:8px 0"><b>替补</b>${regRows(waits)}</div>`;
+  html += `</div>`;
 
   // 队伍展示（分组后）
   if(t.teams && t.teams.length){
@@ -433,11 +437,11 @@ async function checkSecretGate(id){
     }
   }catch(e){ showMsg(e.message); }
 }
-async function doTournamentRegister(id){
+async function doTournamentRegister(id, role){
   const secret = localStorage.getItem('d2_secret_'+id);
   if(!secret){ showSecretGate(id); return; }
   try{
-    const d = await api.post('/api/tournament/'+id+'/register', {role:$('#r-role').value, secret});
+    const d = await api.post('/api/tournament/'+id+'/register', {role, secret});
     const roleCn = d.role==='captain'?'队长':d.role==='waitlist'?'替补':'队员';
     showMsg('报名成功'+(d.role==='waitlist'?'（队员已满，已自动转为替补）':'')+'：'+roleCn, true);
     renderDetail(id);
