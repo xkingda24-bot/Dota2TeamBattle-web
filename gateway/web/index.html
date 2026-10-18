@@ -74,8 +74,6 @@ input:focus,select:focus{border-color:var(--accent)}
     <span class="logo" onclick="go('#/home')">DOTA2 战队赛</span>
     <nav>
       <button class="btn ghost small" onclick="go('#/home')">主页</button>
-      <button class="btn ghost small" onclick="go('#/create')" id="nav-create" style="display:none">创建比赛</button>
-      <button class="btn ghost small" onclick="go('#/staff')" id="nav-staff" style="display:none">管理员</button>
     </nav>
     <div class="user" id="userinfo"></div>
   </div>
@@ -135,9 +133,7 @@ function renderTopbar(){
   const tb=$('#topbar');
   if(!api.token || !api.me){ tb.classList.add('hidden'); return; }
   tb.classList.remove('hidden');
-  $('#nav-create').style.display = api.me.isAdmin ? '' : 'none';
-  $('#nav-staff').style.display = api.me ? '' : 'none';
-  $('#userinfo').innerHTML='<span class="muted">'+esc(api.me.nickname)+'</span><button class="btn ghost small" onclick="go(\'#/profile\')">我的资料</button><button class="btn ghost small" onclick="logout()">退出</button>';
+  $('#userinfo').innerHTML='<span class="muted">'+esc(api.me.nickname)+'</span><button class="btn ghost small" onclick="go(\'#/profile\')">我的</button><button class="btn ghost small" onclick="logout()">退出</button>';
 }
 function logout(){ api.clear(); go('#/login'); }
 
@@ -245,13 +241,12 @@ async function renderHome(){
   <div class="row" style="margin-bottom:14px">
     <h2 style="flex:1">主页</h2>`;
   if(d.isAdmin) html += `<button class="btn" onclick="go('#/create')">创建比赛</button>`;
-  if(d.isSuper) html += `<button class="btn ghost" onclick="go('#/staff')">管理员管理</button>`;
   html += `</div>`;
   if(!d.hasSuper){
     html += `<div class="card" style="border-color:var(--warn)"><b>初始化最高管理员：</b>你是第一个注册的用户。系统需要一位最高管理员来管理比赛与管理员名单。请点击下面的按钮将自己设为最高管理员。<br>
     <button class="btn ok" style="margin-top:8px" onclick="initSuper()">我成为最高管理员</button></div>`;
   }
-  html += `<div class="card"><h3>今日比赛</h3>` + cardList(d.today, d) + `</div>`;
+  html += `<div class="card"><h3>今天的比赛（${d.today.length}）</h3>` + cardList(d.today, d) + `</div>`;
   html += `<div class="card"><h3>历史比赛</h3>` + cardList(d.older, d) + `</div>`;
   $('#view').innerHTML = html;
 }
@@ -730,7 +725,8 @@ function renderProfile(){
       <tr><td class="muted">常玩位置</td><td>${rolesText}</td></tr>
       <tr><td class="muted">个人签名</td><td>${esc(u.signature||'') || '未设置'}</td></tr>
     </table>
-    <button class="btn" style="width:100%;margin-top:14px" onclick="editProfile()">编辑个人资料</button></div>`;
+    <button class="btn" style="width:100%;margin-top:14px" onclick="editProfile()">编辑个人资料</button>
+    ${u.isSuper ? '<button class="btn ghost" style="width:100%;margin-top:10px" onclick="go(\'#/staff\')">管理员管理</button>' : ''}</div>`;
 }
 function editProfile(){
   const u = api.me;
