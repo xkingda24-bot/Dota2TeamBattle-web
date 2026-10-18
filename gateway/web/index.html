@@ -137,15 +137,17 @@ function renderTopbar(){
   if(!api.token || !api.me){ tb.classList.add('hidden'); return; }
   tb.classList.remove('hidden');
   $('#nav-create').style.display = api.me.isAdmin ? '' : 'none';
-  $('#nav-staff').style.display = api.me.isSuper ? '' : 'none';
+  $('#nav-staff').style.display = api.me ? '' : 'none';
   $('#nav-profile').textContent = '我的资料';
   $('#userinfo').innerHTML='<span class="muted">'+esc(api.me.nickname)+'</span><button class="btn ghost small" onclick="logout()">退出</button>';
 }
 function logout(){ api.clear(); go('#/login'); }
 
 // ---------- 路由 ----------
+let refreshTimer = null;
 window.addEventListener('hashchange', route);
 async function route(){
+  if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   if(!$('#view')) return;
   const h = location.hash || '#/home';
   if(!api.token || !api.me){
@@ -271,10 +273,10 @@ function renderCreate(){
       <option value="auto">系统分组（按天梯分自动均衡分组）</option>
     </select>
     <div class="row" style="margin-bottom:10px">
-      <div style="flex:1"><label class="muted">队伍数 N（2-16）</label><input id="c-n" type="number" value="5" min="2" max="16" style="width:100%"></div>
-      <div style="flex:1"><label class="muted">每队人数 K（1-5）</label><input id="c-k" type="number" value="5" min="1" max="5" style="width:100%"></div>
+      <div style="flex:1"><label class="muted">队伍数 N（2-16）</label><input id="c-n" type="number" value="8" min="2" max="16" style="width:100%"></div>
+      <div style="flex:1"><label class="muted">每队人数 K（1-5）</label><input id="c-k" type="number" value="4" min="1" max="5" style="width:100%"></div>
     </div>
-    <label class="muted">替补名额（0-20，可选）</label><input id="c-wait" type="number" value="3" min="0" max="20" style="width:100%;margin-bottom:16px">
+    <label class="muted">替补名额（0-20，可选）</label><input id="c-wait" type="number" value="5" min="0" max="20" style="width:100%;margin-bottom:16px">
     <button class="btn" style="width:100%" onclick="doCreate()">创建</button></div>`;
 }
 async function doCreate(){
@@ -289,6 +291,7 @@ async function doCreate(){
 
 // ---------- 比赛详情 ----------
 async function renderDetail(id){
+  if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   const t = await api.get('/api/tournament/'+id);
   const me = api.me;
   let html = `<div class="row" style="margin-bottom:10px">
@@ -308,7 +311,7 @@ async function renderDetail(id){
     }else{
       html += `<div class="row">
         <select id="r-role" style="width:120px"><option value="player">队员</option>${t.mode==='captain'?'<option value="captain">队长</option>':''}${t.waitLimit>0?'<option value="waitlist">替补</option>':''}</select>
-        <input id="r-secret" placeholder="报名暗号" style="width:140px">
+        <input id="r-secret" placeholder="报名暗号" value="${esc(localStorage.getItem('d2_secret_'+t.id)||'')}" style="width:140px">
         <button class="btn" onclick="doTournamentRegister(${t.id})">报名</button></div>`;
     }
     html += `</div>`;
@@ -370,11 +373,16 @@ async function renderDetail(id){
     }
     html += `</div></div>`;
   }
+  // 报名阶段 8 秒自动刷新名单
+  if(t.status==='registration'){
+    refreshTimer = setInterval(()=>{ renderDetail(id); }, 8000);
+  }
   $('#view').innerHTML = html;
 }
 async function doTournamentRegister(id){
   try{
     const d = await api.post('/api/tournament/'+id+'/register', {role:$('#r-role').value, secret:$('#r-secret').value});
+    localStorage.setItem('d2_secret_'+id, $('#r-secret').value.trim());
     const roleCn = d.role==='captain'?'队长':d.role==='waitlist'?'替补':'队员';
     showMsg('报名成功'+(d.role==='waitlist'?'（队员已满，已自动转为替补）':'')+'：'+roleCn, true);
     renderDetail(id);
@@ -453,19 +461,58 @@ async function resetGroup(id){
 async function seedTest(id){
   confirmBox('注入虚拟数据','将注入虚拟测试用户报名（仅测试用），确定？','注入', async()=>{ try{ await api.post('/api/tournament/'+id+'/seed-test', {}); renderDetail(id); }catch(e){ showMsg(e.message); } });
 }
+let groupDraft = null;
 async function autoGroup(id){
-  const t = await api.get('/api/tournament/'+id);
   try{
     const d = await api.post('/api/tournament/'+id+'/auto-group', {});
-    const groups = d.groups.map((g,i)=>`<div class="match"><b style="color:var(--accent)">第 ${i+1} 组</b>（均分 ${g.avgMmr}，缺位 ${(g.missingRoles||[]).join('/')||'无'}）<br>
-    ${g.members.map(m=>esc(m.nickname)+' ('+m.mmr+')').join('、')}</div>`).join('');
-    $('#modal').innerHTML=`<h3>系统分组预览</h3><p class="muted">组间均分差 ${d.maxDiff}（${d.maxDiffOk?'均衡':'偏差较大'}）</p>${groups}
-    <div class="row" style="margin-top:12px"><button class="btn ok" onclick="confirmGroup(${id})">确认分组</button><button class="btn ghost" onclick="closeModal()">重新预览</button></div>`;
-    $('#modal-bg').classList.add('show');
+    groupDraft = {id, groups: d.groups.map(g => g.members.map(m => ({userID:m.userID, nickname:m.nickname, mmr:m.mmr, roles:m.roles||[]}))), sel: null};
+    updateGroupView();
   }catch(e){ showMsg(e.message); }
 }
+function groupStats(g){
+  const avg = Math.round(g.reduce((s,m)=>s+m.mmr,0)/g.length);
+  const cap = g.reduce((a,b)=>b.mmr>a.mmr?b:a, g[0]);
+  const roles = new Set(g.flatMap(m=>m.roles||[]));
+  const missing = [1,2,3,4,5].filter(r=>!roles.has(r));
+  return {avg, cap, missing};
+}
+function toggleSwap(gi, mi){
+  if(!groupDraft) return;
+  const g = groupDraft.groups;
+  if(groupDraft.sel === null){ groupDraft.sel = [gi, mi]; updateGroupView(); return; }
+  const [sgi, smi] = groupDraft.sel;
+  if(sgi === gi){ groupDraft.sel = null; updateGroupView(); return; }
+  const a = g[sgi][smi], b = g[gi][mi];
+  g[sgi][smi] = b; g[gi][mi] = a;
+  groupDraft.sel = null;
+  updateGroupView();
+}
+function updateGroupView(){
+  if(!groupDraft) return;
+  const groups = groupDraft.groups;
+  const stats = groups.map(groupStats);
+  const maxDiff = Math.max(...stats.map(s=>s.avg)) - Math.min(...stats.map(s=>s.avg));
+  const hasMissing = stats.some(s=>s.missing.length>0);
+  $('#modal').innerHTML=`<h3>系统分组预览</h3>
+  <p class="muted">组间均分差 ${maxDiff}（${maxDiff<=300?'均衡':'偏差较大'}）${hasMissing?' · <b style="color:var(--warn)">部分组缺位置，确认前可先交换调整</b>':''}</p>
+  <p class="muted" style="margin-bottom:6px">点击队员选中，再点另一组队员可交换；点同组队员取消选中。</p>
+  ${groups.map((g,i)=>{ const s=stats[i]; return `<div class="match"><b style="color:var(--accent)">第 ${i+1} 组</b>（均分 ${s.avg}，组长 ${esc(s.cap.nickname)}，缺位 ${s.missing.join('/')||'无'}）<br>
+  ${g.map((m,j)=>`<span class="chip ${groupDraft.sel&&groupDraft.sel[0]===i&&groupDraft.sel[1]===j?'on':''}" style="cursor:pointer" onclick="toggleSwap(${i},${j})">${esc(m.nickname)} (${m.mmr})</span>`).join(' ')}</div>`; }).join('')}
+  <div class="row" style="margin-top:12px"><button class="btn ok" onclick="confirmGroup(${groupDraft.id})">确认分组</button><button class="btn ghost" onclick="autoGroup(${groupDraft.id})">重新预览</button><button class="btn ghost" onclick="closeModal()">关闭</button></div>`;
+  $('#modal-bg').classList.add('show');
+}
 async function confirmGroup(id){
-  try{ await api.post('/api/tournament/'+id+'/confirm-group', {groups:[]}); closeModal(); showMsg('分组完成', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+  if(!groupDraft) return;
+  const groups = groupDraft.groups;
+  const hasMissing = groups.some((g,i)=>groupStats(g).missing.length>0);
+  const submit = async ()=>{
+    try{
+      await api.post('/api/tournament/'+id+'/confirm-group', {groups: groups.map(g=>g.map(m=>m.userID))});
+      groupDraft = null; closeModal(); showMsg('分组完成', true); renderDetail(id);
+    }catch(e){ showMsg(e.message); }
+  };
+  if(hasMissing){ confirmBox('确认分组','部分组缺少位置（缺位已标出）。仍要确认？','仍确认', submit); }
+  else await submit();
 }
 
 // ---------- 选人 ----------
@@ -541,13 +588,13 @@ async function renderBracket(id){
         <div class="team ${done&&!aWin?'win':''}">${done?` <span class="score">${m.scoreB}</span>`:''}${esc(m.displayB)}</div>
       </div>`;
       if(m.status==='pending') html += `<div class="muted">${m.teamAInfo&&m.teamBInfo?'待记录结果':'等待对阵确定'}</div>`;
-      if(t.isAdmin && m.status!=='done'){
+      if(t.isAdmin && t.status!=='finished' && m.status!=='done'){
         html += `<div class="row" style="margin-top:8px">
           ${m.teamAInfo&&m.teamBInfo?`<button class="btn small" onclick="setResult(${t.id},${m.id})">记录结果</button>`:''}
           <select class="small" id="bo-${m.id}" style="width:80px"><option>BO1</option><option>BO3</option><option>BO5</option></select>
           <button class="btn ghost small" onclick="setBo(${t.id},${m.id})">设赛制</button></div>`;
       }
-      if(t.isAdmin && m.status==='done'){
+      if(t.isAdmin && t.status!=='finished' && m.status==='done'){
         html += `<button class="btn ghost small" style="margin-top:8px" onclick="resetResult(${t.id},${m.id})">修正本场（级联重置后续）</button>`;
       }
       html += `</div>`;
@@ -562,13 +609,21 @@ async function setBo(id, mid){
 async function setResult(id, mid){
   const t = await api.get('/api/tournament/'+id);
   const m = t.matches.find(x=>x.id===mid);
-  $('#modal').innerHTML=`<h3>记录 ${esc(m.label||'本场')} 结果</h3><p class="muted">胜方：</p>
-  <button class="btn small" style="width:100%;margin-bottom:6px" onclick="saveResult(${id},${mid},'${m.teamAInfo.userID}')">${esc(m.displayA)}</button>
-  <button class="btn small" style="width:100%" onclick="saveResult(${id},${mid},'${m.teamBInfo.userID}')">${esc(m.displayB)}</button>`;
+  const boNum = m.bo==='BO3'?3:m.bo==='BO5'?5:1;
+  $('#modal').innerHTML=`<h3>记录 ${esc(m.label||'本场')} 结果（${m.bo}）</h3><p class="muted">胜方（点击即记录，可先填比分）：</p>
+  <div class="row" style="margin:8px 0 6px"><label class="muted">胜方比分</label><input id="rs-a" type="number" min="0" max="${boNum}" placeholder="A 队小分" style="width:90px"><span class="muted">:</span><input id="rs-b" type="number" min="0" max="${boNum}" placeholder="B 队小分" style="width:90px"></div>
+  <p class="muted">比分可留空，将按 ${m.bo} 自动填满（胜方取满）。</p>
+  <button class="btn small" style="width:100%;margin-top:6px" onclick="saveResult(${id},${mid},'${m.teamAInfo.userID}')">${esc(m.displayA)} 胜</button>
+  <button class="btn small" style="width:100%;margin-top:6px" onclick="saveResult(${id},${mid},'${m.teamBInfo.userID}')">${esc(m.displayB)} 胜</button>`;
   $('#modal-bg').classList.add('show');
 }
 async function saveResult(id, mid, uid){
-  try{ await api.post('/api/tournament/'+id+'/result', {matchId:mid, winner:'U'+uid}); closeModal(); renderBracket(id); }catch(e){ showMsg(e.message); }
+  try{
+    const sa = $('#rs-a').value, sb = $('#rs-b').value;
+    const body = {matchId:mid, winner:'U'+uid};
+    if(sa!=='' || sb!==''){ body.scoreA=Number(sa||0); body.scoreB=Number(sb||0); }
+    await api.post('/api/tournament/'+id+'/result', body); closeModal(); renderBracket(id);
+  }catch(e){ showMsg(e.message); }
 }
 async function resetResult(id, mid){
   confirmBox('修正结果','将重置本场及所有后续比赛结果（冠军将清空），确定？','修正', async()=>{ try{ await api.post('/api/tournament/'+id+'/reset-result', {matchId:mid}); renderBracket(id); }catch(e){ showMsg(e.message); } });
@@ -576,26 +631,26 @@ async function resetResult(id, mid){
 
 // ---------- 管理员 ----------
 async function renderStaff(){
-  const me = api.me;
-  if(!me.isSuper){ showMsg('仅最高管理员可访问'); go('#/home'); return; }
   const d = await api.get('/api/auth/staff');
-  const users = await api.get('/api/auth/users');
-  let html = `<div class="row" style="margin-bottom:14px"><h2 style="flex:1">管理员管理</h2><button class="btn ghost small" onclick="go('#/home')">返回</button></div>`;
+  let html = `<div class="row" style="margin-bottom:14px"><h2 style="flex:1">管理员名单</h2><button class="btn ghost small" onclick="go('#/home')">返回</button></div>`;
   html += `<div class="card"><h3>当前管理员</h3>`;
   if(d.superAdmin) html += `<p>最高管理员：<b style="color:var(--accent)">${esc(d.superAdmin.nickname)}</b>（ID ${d.superAdmin.userID}）</p>`;
   if(d.admins.length) html += `<p>管理员：${d.admins.map(a=>esc(a.nickname)+'（'+a.username+'）').join('、')}</p>`;
   html += `</div>`;
-  html += `<div class="card"><h3>用户列表 <span class="muted">（${users.users.length} 人）</span></h3><table class="tbl">
-  <tr><th>昵称</th><th>用户名</th><th>ID</th><th>天梯分</th><th>位置</th><th>签名</th><th>角色</th><th></th></tr>`;
-  users.users.forEach(u=>{
-    const isSuper = d.superAdmin && d.superAdmin.userID===u.userID;
-    const isAdm = d.admins.some(a=>a.userID===u.userID);
-    html += `<tr><td>${esc(u.nickname)}</td><td>${esc(u.username)}</td><td>${u.userID}</td><td>${u.mmr}</td>
-    <td>${(u.roles||[]).join('/')}</td><td class="muted">${esc(u.signature||'')}</td>
-    <td>${isSuper?'<span class="tag" style="color:var(--accent)">超管</span>':isAdm?'<span class="tag">管理员</span>':'<span class="muted">普通</span>'}</td>
-    <td>${(!isSuper&&!isAdm)?`<button class="btn ghost small" onclick="addAdmin(${u.userID})">设为管理员</button>`:(!isSuper&&isAdm)?`<button class="btn danger small" onclick="removeAdmin(${u.userID})">移除</button>`:''}</td></tr>`;
-  });
-  html += `</table></div>`;
+  if(d.isSuper){
+    const users = await api.get('/api/auth/users');
+    html += `<div class="card"><h3>用户列表 <span class="muted">（${users.users.length} 人）</span></h3><table class="tbl">
+    <tr><th>昵称</th><th>用户名</th><th>ID</th><th>天梯分</th><th>位置</th><th>签名</th><th>角色</th><th></th></tr>`;
+    users.users.forEach(u=>{
+      const isSuper = d.superAdmin && d.superAdmin.userID===u.userID;
+      const isAdm = d.admins.some(a=>a.userID===u.userID);
+      html += `<tr><td>${esc(u.nickname)}</td><td>${esc(u.username)}</td><td>${u.userID}</td><td>${u.mmr}</td>
+      <td>${(u.roles||[]).join('/')}</td><td class="muted">${esc(u.signature||'')}</td>
+      <td>${isSuper?'<span class="tag" style="color:var(--accent)">超管</span>':isAdm?'<span class="tag">管理员</span>':'<span class="muted">普通</span>'}</td>
+      <td>${(!isSuper&&!isAdm)?`<button class="btn ghost small" onclick="addAdmin(${u.userID})">设为管理员</button>`:(!isSuper&&isAdm)?`<button class="btn danger small" onclick="removeAdmin(${u.userID})">移除</button>`:''}</td></tr>`;
+    });
+    html += `</table></div>`;
+  }
   $('#view').innerHTML = html;
 }
 async function addAdmin(uid){ try{ await api.post('/api/auth/add-admin', {userID:uid}); renderStaff(); }catch(e){ showMsg(e.message); } }

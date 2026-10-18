@@ -398,6 +398,10 @@ func (a *App) setMatchBo(w http.ResponseWriter, r *http.Request, uid int) {
 		writeErr(w, http.StatusBadRequest, "当前不在对战阶段")
 		return
 	}
+	if t.ArchivedAt != nil {
+		writeErr(w, http.StatusBadRequest, "比赛已归档，不能修改赛制")
+		return
+	}
 	var req struct {
 		MatchID int    `json:"matchId"`
 		Bo      string `json:"bo"`
@@ -458,6 +462,10 @@ func (a *App) setMatchResult(w http.ResponseWriter, r *http.Request, uid int) {
 	}
 	if t.Status != "battle" {
 		writeErr(w, http.StatusBadRequest, "当前不在对战阶段")
+		return
+	}
+	if t.ArchivedAt != nil {
+		writeErr(w, http.StatusBadRequest, "比赛已归档，不能修改结果")
 		return
 	}
 	var req struct {
@@ -586,6 +594,10 @@ func (a *App) resetMatchResult(w http.ResponseWriter, r *http.Request, uid int) 
 	t, err := a.getTournament(id)
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "比赛不存在")
+		return
+	}
+	if t.ArchivedAt != nil {
+		writeErr(w, http.StatusBadRequest, "比赛已归档，不能修正结果")
 		return
 	}
 	var req struct {
