@@ -574,7 +574,7 @@ async function moveReg(id, uid, toRole){
   }catch(e){ showMsg(e.message); }
 }
 async function startDraft(id){
-  try{ await api.post('/api/tournament/'+id+'/start-draft', {}); showMsg('选人已开始', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+  try{ await api.post('/api/tournament/'+id+'/start-draft', {}); showMsg('选人已开始', true); go('#/draft/'+id); }catch(e){ showMsg(e.message); }
 }
 async function rollbackStage(id, stage){
   const cn = stage==='draft'?'选人':'报名';
@@ -717,8 +717,7 @@ async function renderDraft(id){
   const isAdmin = t.isAdmin;
   const myTurn = d.currentCaptain && (me.userID===d.currentCaptain.userID || isAdmin);
   let html = `<div class="row" style="margin-bottom:10px"><h2 style="flex:1">当前比赛正在选人</h2>
-  <span class="tag draft">第 ${d.round} 轮 · 第 ${d.capIdx+1} 顺位</span>
-  <button class="btn ghost small" onclick="go('#/t/${t.id}')">返回详情</button></div>`;
+  <span class="tag draft">第 ${d.round} 轮 · 第 ${d.capIdx+1} 顺位</span></div>`;
   html += `<div class="muted" style="margin-bottom:12px">时间:${esc(t.time||'')} · 共${t.N}队 (每队1队长+${t.K}队员) · 创建人 ${esc(t.creatorName||'')}</div>`;
 
   html += `<div class="card"><h3>${d.done?'选人已完成':(d.currentCaptain?`${esc(d.currentCaptain.teamName||('第'+(d.capIdx+1)+'队'))} 队长${esc(d.currentCaptain.nickname)} 请挑选队员`:'—')}</h3>
