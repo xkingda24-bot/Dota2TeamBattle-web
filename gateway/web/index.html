@@ -151,6 +151,7 @@ async function route(){
   if(!$('#view')) return;
   const h = location.hash || '#/home';
   if(!api.token || !api.me){
+    $('#topbar').classList.add('hidden');  // 未登录（含退出后）隐藏顶部导航
     if(h.startsWith('#/login')) return renderLogin();
     go('#/login'); return;
   }
