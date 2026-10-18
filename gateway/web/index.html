@@ -233,7 +233,7 @@ async function doAccountRegister(){
 async function renderHome(){
   // todayStart 用毫秒（服务端 CreatedAt 为 UnixMilli），本地今天 0 点换算
   const d = await api.get('/api/tournament/home?todayStart=' + (new Date().setHours(0,0,0,0)));
-  let html = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px;min-height:200px;background:url('/img/ti-banner.png') center/cover no-repeat">
+  let html = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px;min-height:200px;background:url('/img/ti-banner.png') center 25%/cover no-repeat">
     <div style="min-height:200px;box-sizing:border-box;padding:34px 22px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(100deg,rgba(13,17,23,.85),rgba(13,17,23,.3) 70%,transparent);color:#fff">
       <h2 style="margin:0 0 8px;font-size:22px">欢迎回来，${esc(api.me.nickname)}</h2>
       <p style="margin:0;color:#c9d1d9;font-size:14px">DOTA2 战队赛 · 组队开黑，来一场真正的对决</p>
