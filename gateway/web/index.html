@@ -38,6 +38,16 @@ h3{font-size:15px;font-weight:700}
 .topbar nav{display:flex;gap:6px;flex:1;flex-wrap:wrap}
 .topbar .user{margin-left:auto;display:flex;align-items:center;gap:8px}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-m);padding:16px;margin-bottom:14px}
+.steps{display:flex;align-items:center;margin:0 0 12px;font-size:13px}
+.step{display:flex;align-items:center;gap:6px;color:var(--muted);white-space:nowrap}
+.step .dot{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--panel);color:var(--muted);flex:none}
+.step.done{color:var(--text)}
+.step.done .dot{background:var(--accent);border-color:var(--accent);color:#141414}
+.step.active{color:var(--text);font-weight:700}
+.step.active .dot{background:rgba(255,140,26,.18);border-color:var(--accent);color:var(--accent)}
+.sline{flex:1;height:2px;background:var(--border);margin:0 8px;min-width:22px}
+.sline.done{background:var(--accent)}
+
 .card h3{margin-bottom:10px;font-size:15px;color:var(--text);padding-left:9px;border-left:3px solid var(--accent)}
 .grid{display:grid;gap:12px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -372,6 +382,16 @@ async function doCreate(){
 }
 
 // ---------- 比赛详情 ----------
+function stepBar(st){
+  if(st==='finished'||st==='archived') st='finished';
+  const steps=[['registration','报名'],['draft','选人/分组'],['battle','对战'],['finished','已结束']];
+  const order={registration:0,draft:1,battle:2,finished:4};
+  const cur=order[st]??0;
+  return `<div class="steps">`+steps.map((s,i)=>{
+    const done=i<cur, active=i===cur;
+    return `<div class="step ${done?'done':''} ${active?'active':''}"><span class="dot">${done?'✓':i+1}</span><span>${s[1]}</span></div>`+(i<3?`<div class="sline ${i<cur?'done':''}"></div>`:'');
+  }).join('')+`</div>`;
+}
 async function renderDetail(id){
   id = Number(String(id).replace(/\D/g,'')) || 0;  // 归一化 hash 传入的 id（如 '/12' → 12）
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
@@ -386,6 +406,7 @@ async function renderDetail(id){
     <h2 style="flex:1">${esc(t.name)}</h2>
     <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
     <button class="btn ghost small" onclick="go('#/home')">返回</button></div>
+  ${stepBar(t.archivedAt?'finished':t.status)}
   <div class="muted" style="margin-bottom:12px">${t.mode==='captain'?('时间:'+esc(t.time||'')+' · 共'+t.N+'队 (每队1队长+'+t.K+'队员)'):('时间:'+esc(t.time||'')+' · '+t.N+'队 · 每队'+t.K+'人')} · 创建人 ${esc(t.creatorName||'')}</div>`;
 
   if(t.champion) html += `<div class="card" style="border-color:var(--accent)"><h3>🏆 冠军：${esc(t.champion.name)}</h3></div>`;
