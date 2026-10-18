@@ -671,7 +671,9 @@ async function renderStaff(){
   let html = `<div class="row" style="margin-bottom:14px"><h2 style="flex:1">管理员名单</h2><button class="btn ghost small" onclick="go('#/home')">返回</button></div>`;
   html += `<div class="card"><h3>当前管理员</h3>`;
   if(d.superAdmin) html += `<p>最高管理员：<b style="color:var(--accent)">${esc(d.superAdmin.nickname)}</b>（ID ${d.superAdmin.userID}）</p>`;
-  if(d.admins.length) html += `<p>管理员：${d.admins.map(a=>esc(a.nickname)+'（'+a.username+'）').join('、')}</p>`;
+  if(d.admins.length){
+    html += `<p>管理员：${d.admins.map(a=>esc(a.nickname)+'（'+esc(a.username)+'）'+(d.isSuper?` <button class="btn danger small" onclick="removeAdmin(${a.userID})">移除</button>`:'')).join('、')}</p>`;
+  }
   html += `</div>`;
   if(d.isSuper){
     const users = await api.get('/api/auth/users');
