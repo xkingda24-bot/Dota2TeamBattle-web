@@ -689,7 +689,7 @@ async function renderDraft(id){
   <button class="btn ghost small" onclick="go('#/t/${t.id}')">返回详情</button></div>`;
   html += `<div class="muted" style="margin-bottom:12px">时间:${esc(t.time||'')} · 共${t.N}队 (每队1队长+${t.K}队员) · 创建人 ${esc(t.creatorName||'')}</div>`;
 
-  html += `<div class="card"><h3>${d.done?'选人已完成':(d.currentCaptain?`给我${esc(d.currentCaptain.teamName||('第'+(d.capIdx+1)+'队'))} 队长${esc(d.currentCaptain.nickname)} 请挑选英雄`:'—')}</h3>
+  html += `<div class="card"><h3>${d.done?'选人已完成':(d.currentCaptain?`${esc(d.currentCaptain.teamName||('第'+(d.capIdx+1)+'队'))} 队长${esc(d.currentCaptain.nickname)} 请挑选队员`:'—')}</h3>
   <p class="muted">轮次 ${d.turn}/${d.totalPicks} ${d.done?'（已完成）':myTurn?'（轮到你了）':'（等待其他队长）'}</p>`;
 
   if(!d.done){
