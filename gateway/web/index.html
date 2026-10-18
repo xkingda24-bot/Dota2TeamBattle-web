@@ -355,7 +355,7 @@ async function renderDetail(id){
     <h2 style="flex:1">${esc(t.name)}</h2>
     <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
     <button class="btn ghost small" onclick="go('#/home')">返回</button></div>
-  <div class="muted" style="margin-bottom:12px">${esc(t.time||'')} · ${MODE_CN[t.mode]} · ${t.N}队 · 每队${t.K}人 · 创建者 ${esc(t.creatorName||'')}</div>`;
+  <div class="muted" style="margin-bottom:12px">${t.mode==='captain'?('时间:'+esc(t.time||'')+' · 共'+t.N+'队 (每队1队长+'+t.K+'队员)'):('时间:'+esc(t.time||'')+' · '+t.N+'队 · 每队'+t.K+'人')} · 创建人 ${esc(t.creatorName||'')}</div>`;
 
   if(t.champion) html += `<div class="card" style="border-color:var(--accent)"><h3>🏆 冠军：${esc(t.champion.name)}</h3></div>`;
 
@@ -417,16 +417,15 @@ async function renderDetail(id){
     html += `<div class="card"><h3>管理员操作</h3><div class="row" style="gap:8px">`;
     if(t.status==='registration'){
       if(t.mode==='auto') html += `<button class="btn" onclick="autoGroup(${t.id})">系统分组预览</button>`;
-      else html += `<button class="btn" onclick="startDraft(${t.id})" ${t.captainFilled<t.captainTotal||t.playerFilled<t.playerTotal?'disabled':''}>开始选人</button>`;
-      html += `<button class="btn ghost" onclick="editConfig(${t.id})">修改配置</button>`;
-      html += `<button class="btn ghost" onclick="seedTest(${t.id})">注入虚拟数据（测试）</button>`;
+      else html += `<button class="btn" onclick="startDraft(${t.id})" ${t.captainFilled<t.captainTotal||t.playerFilled<t.playerTotal?'disabled':''}>开始选人（随机排序队长）</button>`;
+      html += `<button class="btn ghost" onclick="editConfig(${t.id})">修改比赛配置</button>`;
       html += `<button class="btn danger" onclick="delTournament(${t.id})">删除比赛</button>`;
     }
     if(t.status==='draft'){
       if(t.mode==='captain') html += `<button class="btn" onclick="go('#/draft/${t.id}')">进入选人</button>`;
       html += `<button class="btn" onclick="setSeeding(${t.id})">设置对阵落位</button>`;
       html += `<button class="btn ghost" onclick="randomSeeding(${t.id})">随机落位</button>`;
-      html += `<button class="btn ok" onclick="startBracket(${t.id})">生成对阵</button>`;
+      if(t.draftInfo && t.draftInfo.done) html += `<button class="btn ok" onclick="startBracket(${t.id})">生成对阵</button>`;
       if(t.mode==='auto') html += `<button class="btn danger" onclick="resetGroup(${t.id})">重新分组</button>`;
     }
     if(t.status==='battle'){
@@ -636,6 +635,7 @@ async function renderDraft(id){
   let html = `<div class="row" style="margin-bottom:10px"><h2 style="flex:1">当前比赛正在选人</h2>
   <span class="tag draft">第 ${d.round} 轮 · 第 ${d.capIdx+1} 顺位</span>
   <button class="btn ghost small" onclick="go('#/t/${t.id}')">返回详情</button></div>`;
+  html += `<div class="muted" style="margin-bottom:12px">时间:${esc(t.time||'')} · 共${t.N}队 (每队1队长+${t.K}队员) · 创建人 ${esc(t.creatorName||'')}</div>`;
 
   html += `<div class="card"><h3>${d.done?'选人已完成':(d.currentCaptain?`给我${esc(d.currentCaptain.teamName||('第'+(d.capIdx+1)+'队'))} 队长${esc(d.currentCaptain.nickname)} 请挑选英雄`:'—')}</h3>
   <p class="muted">轮次 ${d.turn}/${d.totalPicks} ${d.done?'（已完成）':myTurn?'（轮到你了）':'（等待其他队长）'}</p>`;
