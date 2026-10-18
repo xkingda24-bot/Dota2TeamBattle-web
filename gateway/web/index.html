@@ -268,7 +268,7 @@ function renderCreate(){
     <h3>创建比赛</h3>
     <label class="muted">比赛名称</label><input id="c-name" placeholder="例：周末内战" style="width:100%;margin-bottom:10px">
     <label class="muted">比赛时间</label><input id="c-time" value="${defTime}" style="width:100%;margin-bottom:10px">
-    <label class="muted">报名暗号（参加者需输入）</label><input id="c-secret" placeholder="例：1234" style="width:100%;margin-bottom:10px">
+    <label class="muted">比赛密码（参加者需输入）</label><input id="c-secret" placeholder="例：1234" style="width:100%;margin-bottom:10px">
     <label class="muted">模式</label>
     <select id="c-mode" style="width:100%;margin-bottom:10px">
       <option value="captain">队长选人（队长蛇形选人组队）</option>
@@ -296,7 +296,7 @@ async function renderDetail(id){
   id = Number(String(id).replace(/\D/g,'')) || 0;  // 归一化 hash 传入的 id（如 '/12' → 12）
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   const t = await api.get('/api/tournament/'+id);
-  // 需求 4.1：报名阶段，未报名且本机未通过暗号 → 先弹暗号验证，通过后才能进入报名页
+  // 需求 4.1：报名阶段，未报名且本机未通过比赛密码 → 先弹窗验证，通过后才能进入报名页
   if(t.status==='registration' && !t.myReg && !localStorage.getItem('d2_passed_'+id)){
     showSecretGate(id);
     return;
@@ -319,7 +319,7 @@ async function renderDetail(id){
     }else{
       html += `<div class="row">
         <select id="r-role" style="width:120px"><option value="player">队员</option>${t.mode==='captain'?'<option value="captain">队长</option>':''}${t.waitLimit>0?'<option value="waitlist">替补</option>':''}</select>
-        <input id="r-secret" placeholder="报名暗号" value="${esc(localStorage.getItem('d2_secret_'+t.id)||'')}" style="width:140px">
+        <input id="r-secret" placeholder="比赛密码" value="${esc(localStorage.getItem('d2_secret_'+t.id)||'')}" style="width:140px">
         <button class="btn" onclick="doTournamentRegister(${t.id})">报名</button></div>`;
     }
     html += `</div>`;
@@ -330,7 +330,7 @@ async function renderDetail(id){
   const plays = t.registrations.filter(r=>r.role==='player');
   const waits = t.registrations.filter(r=>r.role==='waitlist');
   html += `<div class="card"><h3>名单 <span class="muted">队长 ${caps.length}/${t.captainTotal} · 队员 ${plays.length}/${t.playerTotal} · 替补 ${waits.length}/${t.waitLimit}</span></h3>`;
-  if(t.secret && t.isAdmin) html += `<p class="muted">报名暗号：<b style="color:var(--accent)">${esc(t.secret)}</b>（仅管理员可见）</p>`;
+  if(t.secret && t.isAdmin) html += `<p class="muted">比赛密码：<b style="color:var(--accent)">${esc(t.secret)}</b>（仅管理员可见）</p>`;
   html += `<table class="tbl"><tr><th>昵称</th><th>角色</th><th>天梯分</th><th>位置</th><th>签名</th>${t.isAdmin?'<th></th>':''}</tr>`;
   [...caps.map(r=>[r,'captain']), ...plays.map(r=>[r,'player']), ...waits.map(r=>[r,'waitlist'])].forEach(([r])=>{
     html += `<tr><td>${esc(r.nickname)}${r.teamName?` <span class="muted">(${esc(r.teamName)})</span>`:''}</td>
@@ -387,11 +387,11 @@ async function renderDetail(id){
   }
   $('#view').innerHTML = html;
 }
-/* 暗号验证闸门（需求 4.1）：点击比赛后未报名且本机未通过暗号 → 先弹窗验证 */
+/* 比赛密码验证闸门（需求 4.1）：点击比赛后未报名且本机未通过密码 → 先弹窗验证 */
 function showSecretGate(id){
-  $('#modal').innerHTML = `<h3>输入报名暗号</h3>
-    <label class="muted">暗号校验通过后才能进入报名</label>
-    <input id="gate-secret" placeholder="报名暗号" style="width:100%;margin-top:6px">
+  $('#modal').innerHTML = `<h3>输入比赛密码</h3>
+    <label class="muted">比赛密码校验通过后才能进入报名</label>
+    <input id="gate-secret" placeholder="比赛密码" style="width:100%;margin-top:6px">
     <div class="row" style="margin-top:12px">
       <button class="btn ghost" onclick="closeModal(); go('#/home')">返回</button>
       <button class="btn" style="flex:1" onclick="checkSecretGate(${id})">验证</button>
@@ -401,7 +401,7 @@ function showSecretGate(id){
 }
 async function checkSecretGate(id){
   const v = $('#gate-secret').value.trim();
-  if(!v){ showMsg('请输入报名暗号'); return; }
+  if(!v){ showMsg('请输入比赛密码'); return; }
   try{
     const d = await api.post('/api/tournament/'+id+'/check-secret', {secret: v});
     if(d.correct){
@@ -410,9 +410,9 @@ async function checkSecretGate(id){
       closeModal();
       renderDetail(id);
     }else{
-      $('#modal').innerHTML = `<h3>输入报名暗号</h3>
-        <label class="muted" style="color:var(--danger);margin-top:4px">暗号错误，请重新输入</label>
-        <input id="gate-secret" placeholder="报名暗号" style="width:100%;margin-top:6px">
+      $('#modal').innerHTML = `<h3>输入比赛密码</h3>
+        <label class="muted" style="color:var(--danger);margin-top:4px">比赛密码错误，请重新输入</label>
+        <input id="gate-secret" placeholder="比赛密码" style="width:100%;margin-top:6px">
         <div class="row" style="margin-top:12px">
           <button class="btn ghost" onclick="closeModal(); go('#/home')">返回</button>
           <button class="btn" style="flex:1" onclick="checkSecretGate(${id})">验证</button>
@@ -447,7 +447,7 @@ async function editConfig(id){
   $('#modal').innerHTML=`<h3>修改报名配置</h3>
   <label class="muted">名称</label><input id="e-name" value="${esc(t.name)}" style="width:100%;margin-bottom:8px">
   <label class="muted">时间</label><input id="e-time" value="${esc(t.time)}" style="width:100%;margin-bottom:8px">
-  <label class="muted">暗号</label><input id="e-secret" value="${esc(t.secret)}" style="width:100%;margin-bottom:8px">
+  <label class="muted">比赛密码</label><input id="e-secret" value="${esc(t.secret)}" style="width:100%;margin-bottom:8px">
   <label class="muted">模式</label><select id="e-mode" style="width:100%;margin-bottom:8px">
     <option value="captain" ${t.mode==='captain'?'selected':''}>队长选人</option><option value="auto" ${t.mode==='auto'?'selected':''}>系统分组</option></select>
   <div class="row" style="margin-bottom:8px"><div style="flex:1"><label class="muted">N</label><input id="e-n" type="number" value="${t.N}" min="2" max="16" style="width:100%"></div>

@@ -389,11 +389,11 @@ func (a *App) create(w http.ResponseWriter, r *http.Request, uid int) {
 		return
 	}
 	if req.Secret == "" {
-		writeErr(w, http.StatusBadRequest, "请设置报名暗号")
+		writeErr(w, http.StatusBadRequest, "请设置比赛密码")
 		return
 	}
 	if len([]rune(req.Secret)) > 20 {
-		writeErr(w, http.StatusBadRequest, "暗号最多 20 个字")
+		writeErr(w, http.StatusBadRequest, "比赛密码最多 20 个字")
 		return
 	}
 	if req.N < 2 || req.N > MAX_N {
@@ -476,11 +476,11 @@ func (a *App) updateConfig(w http.ResponseWriter, r *http.Request, uid int) {
 		return
 	}
 	if req.Secret == "" {
-		writeErr(w, http.StatusBadRequest, "请设置报名暗号")
+		writeErr(w, http.StatusBadRequest, "请设置比赛密码")
 		return
 	}
 	if len([]rune(req.Secret)) > 20 {
-		writeErr(w, http.StatusBadRequest, "暗号最多 20 个字")
+		writeErr(w, http.StatusBadRequest, "比赛密码最多 20 个字")
 		return
 	}
 	if req.N < 2 || req.N > MAX_N {
@@ -540,7 +540,7 @@ func (a *App) updateConfig(w http.ResponseWriter, r *http.Request, uid int) {
 	writeOK(w, map[string]interface{}{})
 }
 
-/* 暗号校验 */
+/* 比赛密码校验 */
 func (a *App) checkSecret(w http.ResponseWriter, r *http.Request, uid int) {
 	id, ok := a.pathID(r)
 	if !ok {
@@ -559,7 +559,7 @@ func (a *App) checkSecret(w http.ResponseWriter, r *http.Request, uid int) {
 	writeOK(w, map[string]interface{}{"correct": req.Secret == t.Secret})
 }
 
-/* 报名（需暗号；资料必填） */
+/* 报名（需比赛密码；资料必填） */
 func (a *App) register(w http.ResponseWriter, r *http.Request, uid int) {
 	if uid <= 0 {
 		writeErr(w, http.StatusUnauthorized, "请先登录")
@@ -598,7 +598,7 @@ func (a *App) register(w http.ResponseWriter, r *http.Request, uid int) {
 	}
 	json.NewDecoder(r.Body).Decode(&req)
 	if req.Secret != t.Secret {
-		writeErr(w, http.StatusBadRequest, "报名暗号错误")
+		writeErr(w, http.StatusBadRequest, "比赛密码错误")
 		return
 	}
 	for _, reg := range t.Registrations {
