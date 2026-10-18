@@ -188,6 +188,22 @@ func (a *App) seedTest(w http.ResponseWriter, r *http.Request, uid int) {
 			toAdd = append(toAdd, reg)
 		}
 	}
+	// 替补（最多注入 5 个，填补到 waitLimit）
+	if t.WaitLimit > 0 {
+		wc := t.WaitLimit
+		if wc > 5 {
+			wc = 5
+		}
+		for i := 0; i < wc; i++ {
+			reg := Registration{
+				UserID: -(200 + i), Nickname: vName(len(vNames)+i), Role: "waitlist", TS: now,
+				MMR: 3500 + rand.Intn(4500), Roles: pickRoleSet(), Signature: pickStr(vSigs),
+			}
+			if !existing[reg.UserID] {
+				toAdd = append(toAdd, reg)
+			}
+		}
+	}
 	if len(toAdd) == 0 {
 		writeErr(w, http.StatusBadRequest, "虚拟用户已全部报名过了（如需重新注入，请先删除本场比赛再重建）")
 		return
@@ -200,15 +216,18 @@ func (a *App) seedTest(w http.ResponseWriter, r *http.Request, uid int) {
 		writeErr(w, http.StatusInternalServerError, "服务异常")
 		return
 	}
-	captainFilled, playerFilled := 0, 0
+	captainFilled, playerFilled, waitFilled := 0, 0, 0
 	for _, reg := range t.Registrations {
 		if reg.Role == "captain" {
 			captainFilled++
 		} else if reg.Role == "player" {
 			playerFilled++
+		} else if reg.Role == "waitlist" {
+			waitFilled++
 		}
 	}
 	writeOK(w, map[string]interface{}{
 		"added": len(toAdd), "captainFilled": captainFilled, "playerFilled": playerFilled,
+		"waitlistFilled": waitFilled, "waitLimit": t.WaitLimit,
 	})
 }
