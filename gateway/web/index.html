@@ -697,15 +697,32 @@ async function removeAdmin(uid){ try{ await api.post('/api/auth/remove-admin', {
 // ---------- 我的资料 ----------
 function renderProfile(){
   const u = api.me;
+  const rolesText = (u.roles||[]).map(r=>['','一号位','二号位','三号位','四号位','五号位'][r]).filter(Boolean).join('、') || '未设置';
   $('#view').innerHTML = `<div class="card" style="max-width:520px;margin:0 auto">
     <h3>我的资料</h3>
+    <p class="muted" style="margin-bottom:12px">用户名：${esc(u.username)}（ID ${u.userID}）</p>
+    <table style="width:100%;line-height:2">
+      <tr><td class="muted" style="width:110px">昵称</td><td>${esc(u.nickname)}</td></tr>
+      <tr><td class="muted">天梯分</td><td>${u.mmr ? u.mmr : '未设置'}</td></tr>
+      <tr><td class="muted">常玩位置</td><td>${rolesText}</td></tr>
+      <tr><td class="muted">个人签名</td><td>${esc(u.signature||'') || '未设置'}</td></tr>
+    </table>
+    <button class="btn" style="width:100%;margin-top:14px" onclick="editProfile()">编辑个人资料</button></div>`;
+}
+function editProfile(){
+  const u = api.me;
+  $('#view').innerHTML = `<div class="card" style="max-width:520px;margin:0 auto">
+    <h3>编辑个人资料</h3>
     <p class="muted" style="margin-bottom:12px">用户名：${esc(u.username)}（ID ${u.userID}）</p>
     <label class="muted">昵称</label><input id="p-nick" value="${esc(u.nickname)}" style="width:100%;margin-bottom:10px">
     <label class="muted">天梯分（必填，1-20000）</label><input id="p-mmr" type="number" value="${u.mmr}" min="1" max="20000" style="width:100%;margin-bottom:10px">
     <label class="muted">常玩位置（可多选）</label>
     <div class="roles-chip" id="p-roles" style="margin:6px 0 10px">${[1,2,3,4,5].map(r=>`<span class="chip ${(u.roles||[]).includes(r)?'on':'off'}" data-r="${r}" onclick="toggleRole(${r})">${['','一号位','二号位','三号位','四号位','五号位'][r]}</span>`).join('')}</div>
     <label class="muted">个人签名（最多 15 字）</label><input id="p-sig" value="${esc(u.signature||'')}" style="width:100%;margin-bottom:16px">
-    <button class="btn" style="width:100%" onclick="saveProfile()">保存资料</button></div>`;
+    <div class="row" style="gap:10px">
+      <button class="btn" style="flex:1" onclick="saveProfile()">保存资料</button>
+      <button class="btn ghost" style="flex:1" onclick="renderProfile()">取消</button>
+    </div></div>`;
 }
 function toggleRole(r){
   const el=$('#p-roles').querySelector('[data-r="'+r+'"]');
@@ -720,7 +737,7 @@ async function saveProfile(){
   if(!Number.isInteger(mmr) || mmr < 1 || mmr > 20000){ showMsg('天梯分需在 1-20000 之间'); return; }
   try{
     api.me = await api.post('/api/auth/profile', {nickname:$('#p-nick').value.trim(), mmr, roles, signature:$('#p-sig').value.trim()});
-    showMsg('资料已保存', true); renderTopbar();
+    showMsg('资料已保存', true); renderTopbar(); renderProfile();
   }catch(e){ showMsg(e.message); }
 }
 
