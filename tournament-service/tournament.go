@@ -343,7 +343,8 @@ func (a *App) home(w http.ResponseWriter, r *http.Request, uid int) {
 	olderRaw := []map[string]interface{}{}
 	for _, t := range all {
 		s := summarize(t, uid)
-		if todayStart > 0 && t.CreatedAt >= todayStart && len(todayRaw) < 30 {
+		// 今日比赛 = 今天创建且未归档（CreatedAt 为 Unix 毫秒，与前端 todayStart 同单位）
+		if todayStart > 0 && t.CreatedAt >= todayStart && t.ArchivedAt == nil && len(todayRaw) < 30 {
 			todayRaw = append(todayRaw, s)
 			continue
 		}
@@ -351,19 +352,9 @@ func (a *App) home(w http.ResponseWriter, r *http.Request, uid int) {
 			olderRaw = append(olderRaw, s)
 		}
 	}
-	today := []map[string]interface{}{}
-	older := []map[string]interface{}{}
-	for _, x := range todayRaw {
-		if x["archivedAt"] == nil {
-			today = append(today, x)
-		} else {
-			older = append(older, x)
-		}
-	}
-	older = append(older, olderRaw...)
 	writeOK(w, map[string]interface{}{
 		"user": user, "isAdmin": isAdmin, "isSuper": isSuper, "hasSuper": hasSuper,
-		"today": today, "older": older,
+		"today": todayRaw, "older": olderRaw,
 	})
 }
 

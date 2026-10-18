@@ -222,6 +222,7 @@ async function doAccountRegister(){
 
 // ---------- 主页 ----------
 async function renderHome(){
+  // todayStart 用毫秒（服务端 CreatedAt 为 UnixMilli），本地今天 0 点换算
   const d = await api.get('/api/tournament/home?todayStart=' + (new Date().setHours(0,0,0,0)));
   let html = `<div class="row" style="margin-bottom:14px">
     <h2 style="flex:1">主页</h2>`;
