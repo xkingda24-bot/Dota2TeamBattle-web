@@ -279,6 +279,7 @@ function cardList(list, d){
   if(!list || !list.length) return '<div class="empty">暂无比赛</div>';
   return list.map(t => {
     const isAdmin = d.isAdmin;
+    const canArchive = isAdmin && t.champion && !t.archivedAt;
     return `<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="go('#/t/${t.id}')">
       <div class="row">
         <b>${esc(t.name)}</b>
@@ -291,8 +292,18 @@ function cardList(list, d){
       </div>
       <div class="row" style="margin-top:6px">
         <span class="muted">队长 ${t.captainFilled}/${t.captainTotal} · 队员 ${t.playerFilled}/${t.playerTotal}</span>
-      </div></div>`;
+      </div>
+      ${isAdmin?`<div class="row" style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--border)">
+        ${canArchive?`<button class="btn ghost small" onclick="event.stopPropagation();archiveFromHome(${t.id})">归档到历史</button>`:''}
+        <button class="btn danger small" onclick="event.stopPropagation();delFromHome(${t.id})">删除</button>
+      </div>`:''}</div>`;
   }).join('');
+}
+async function archiveFromHome(id){
+  confirmBox('归档比赛','该比赛已产生冠军，归档后将移到历史比赛列表。确定归档？','归档', async()=>{ try{ await api.post('/api/tournament/'+id+'/finish', {}); showMsg('已归档到历史比赛', true); renderHome(); }catch(e){ showMsg(e.message); } });
+}
+async function delFromHome(id){
+  confirmBox('删除比赛','删除后不可恢复，确定删除该比赛？','删除', async()=>{ try{ await api.del('/api/tournament/'+id); renderHome(); }catch(e){ showMsg(e.message); } });
 }
 async function initSuper(){
   try{ await api.post('/api/auth/init-super', {}); showMsg('你已是最高管理员', true); renderHome(); }catch(e){ showMsg(e.message); }
@@ -421,8 +432,8 @@ async function renderDetail(id){
     if(t.status==='battle'){
       html += `<button class="btn" onclick="go('#/bracket/${t.id}')">进入赛程管理</button>`;
     }
-    if(t.status!=='finished' && t.champion){
-      html += `<button class="btn ok" onclick="finishTournament(${t.id})">结束并归档</button>`;
+    if(t.champion && !t.archivedAt){
+      html += `<button class="btn ok" onclick="finishTournament(${t.id})">归档比赛</button>`;
     }
     html += `</div></div>`;
   }
