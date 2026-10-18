@@ -396,6 +396,8 @@ async function renderDetail(id){
   id = Number(String(id).replace(/\D/g,'')) || 0;  // 归一化 hash 传入的 id（如 '/12' → 12）
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   const t = await api.get('/api/tournament/'+id);
+  // 选人阶段（队长模式）进入比赛直接显示选人页，无需再点"进入选人"
+  if(t.status==='draft' && t.mode==='captain' && t.draftInfo){ go('#/draft/'+id); return; }
   // 需求 4.1：报名阶段，未报名且非管理员且本机未通过比赛密码 → 先弹窗验证（管理员/创建者已在创建表单填过密码，不再弹窗）
   if(t.status==='registration' && !t.myReg && !t.isAdmin && !localStorage.getItem('d2_passed_'+id)){
     showSecretGate(id);
@@ -491,7 +493,6 @@ async function renderDetail(id){
       html += `<button class="btn danger" onclick="delTournament(${t.id})">删除比赛</button>`;
     }
     if(t.status==='draft'){
-      if(t.mode==='captain') html += `<button class="btn" onclick="go('#/draft/${t.id}')">进入选人</button>`;
       html += `<button class="btn" onclick="setSeeding(${t.id})">设置对阵落位</button>`;
       html += `<button class="btn ghost" onclick="randomSeeding(${t.id})">随机落位</button>`;
       if(t.draftInfo && t.draftInfo.done) html += `<button class="btn ok" onclick="startBracket(${t.id})">生成对阵</button>`;
