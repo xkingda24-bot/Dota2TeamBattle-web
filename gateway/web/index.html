@@ -58,6 +58,7 @@ input:focus,select:focus{border-color:var(--accent)}
 .pick-box{border:2px dashed var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;min-height:40px}
 .pick-box.active{border-color:var(--accent);background:#221a0e}
 .empty{text-align:center;color:var(--muted);padding:30px 0}
+.fill{font-size:15px;font-weight:700;color:var(--accent)}
 .footer{margin-top:30px;text-align:center;color:var(--muted);font-size:12px}
 .hidden{display:none!important}
 .roles-chip{display:inline-flex;gap:6px;flex-wrap:wrap}
@@ -319,7 +320,7 @@ async function renderDetail(id){
     <h2 style="flex:1">${esc(t.name)}</h2>
     <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
     <button class="btn ghost small" onclick="go('#/home')">返回</button></div>
-  <div class="muted" style="margin-bottom:12px">${esc(t.time||'')} · ${MODE_CN[t.mode]} · N=${t.N} K=${t.K} · 创建者 ${esc(t.creatorName||'')}</div>`;
+  <div class="muted" style="margin-bottom:12px">${esc(t.time||'')} · ${MODE_CN[t.mode]} · ${t.N}队 · 每队${t.K}人 · 创建者 ${esc(t.creatorName||'')}</div>`;
 
   if(t.champion) html += `<div class="card" style="border-color:var(--accent)"><h3>🏆 冠军：${esc(t.champion.name)}</h3></div>`;
 
@@ -342,7 +343,7 @@ async function renderDetail(id){
   const caps = t.registrations.filter(r=>r.role==='captain');
   const plays = t.registrations.filter(r=>r.role==='player');
   const waits = t.registrations.filter(r=>r.role==='waitlist');
-  html += `<div class="card"><h3>名单 <span class="muted">队长 ${caps.length}/${t.captainTotal} · 队员 ${plays.length}/${t.playerTotal} · 替补 ${waits.length}/${t.waitLimit}</span></h3>`;
+  html += `<div class="card"><h3>名单 <span class="fill">队长 ${caps.length}/${t.captainTotal} · 队员 ${plays.length}/${t.playerTotal} · 替补 ${waits.length}/${t.waitLimit}</span></h3>`;
   if(t.secret && t.isAdmin) html += `<p class="muted">比赛密码：<b style="color:var(--accent)">${esc(t.secret)}</b>（仅管理员可见）</p>`;
   const regRows = (list) => {
     if(!list.length) return '<p class="muted" style="margin:6px 0">暂无</p>';
