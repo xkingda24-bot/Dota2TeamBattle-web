@@ -106,16 +106,16 @@ func (a *App) loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	if req.Username == "" || req.Password == "" {
-		writeErr(w, http.StatusBadRequest, "请输入用户名和密码")
+		writeErr(w, http.StatusBadRequest, "请输入登录id和密码")
 		return
 	}
 	id, hash, err := a.store.GetPasswordHashByUsername(req.Username)
 	if err != nil {
-		writeErr(w, http.StatusUnauthorized, "用户名或密码错误")
+		writeErr(w, http.StatusUnauthorized, "登录id或密码错误")
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)) != nil {
-		writeErr(w, http.StatusUnauthorized, "用户名或密码错误")
+		writeErr(w, http.StatusUnauthorized, "登录id或密码错误")
 		return
 	}
 	user, err := a.store.GetUserByID(id)
@@ -147,7 +147,7 @@ func (a *App) registerUser(w http.ResponseWriter, r *http.Request) {
 	req.Username = strings.TrimSpace(req.Username)
 	req.Nickname = strings.TrimSpace(req.Nickname)
 	if !validUsername(req.Username) {
-		writeErr(w, http.StatusBadRequest, "用户名需 3-32 位字母/数字/下划线")
+		writeErr(w, http.StatusBadRequest, "登录id需 3-32 位字母/数字/下划线")
 		return
 	}
 	if len(req.Password) < 6 {
@@ -167,7 +167,7 @@ func (a *App) registerUser(w http.ResponseWriter, r *http.Request) {
 	user, err := a.store.CreateUser(req.Username, string(hash), req.Nickname, now)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
-			writeErr(w, http.StatusConflict, "用户名已被使用")
+			writeErr(w, http.StatusConflict, "登录id已被使用")
 		} else {
 			writeErr(w, http.StatusInternalServerError, "服务异常")
 		}

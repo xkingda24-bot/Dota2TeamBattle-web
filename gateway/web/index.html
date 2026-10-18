@@ -184,12 +184,12 @@ function renderLogin(){
         <button class="btn ghost small" id="rg-tab">注册</button>
       </div>
       <div id="lg-form">
-        <input id="lg-user" placeholder="用户名" style="width:100%;margin-bottom:8px">
+        <input id="lg-user" placeholder="登录id" style="width:100%;margin-bottom:8px">
         <input id="lg-pass" type="password" placeholder="密码" style="width:100%;margin-bottom:14px" onkeydown="if(event.key==='Enter')doLogin()">
         <button class="btn" style="width:100%" id="lg-submit">登录</button>
       </div>
       <div id="rg-form" class="hidden">
-        <input id="rg-user" placeholder="用户名（3-32 位字母/数字/下划线）" style="width:100%;margin-bottom:8px">
+        <input id="rg-user" placeholder="登录id（3-32 位字母/数字/下划线）" style="width:100%;margin-bottom:8px">
         <input id="rg-pass" type="password" placeholder="密码（至少 6 位）" style="width:100%;margin-bottom:8px">
         <input id="rg-nick" placeholder="昵称（1-20 个字）" style="width:100%;margin-bottom:14px">
         <button class="btn" style="width:100%" id="rg-submit">注册并登录</button>
@@ -207,7 +207,7 @@ function val(id){ const el = document.getElementById(id); return el ? el.value :
 async function doLogin(){
   try{
     const u = val('lg-user').trim(), p = val('lg-pass');
-    if(!u || !p){ showMsg('请输入用户名和密码'); return; }
+    if(!u || !p){ showMsg('请输入登录id和密码'); return; }
     const d = await api.post('/api/auth/login', {username:u, password:p});
     api.setAuth(d.token, d.user); go('#/home');
   }catch(e){ showMsg(e.message); }
@@ -215,7 +215,7 @@ async function doLogin(){
 async function doAccountRegister(){
   try{
     const u = val('rg-user').trim(), p = val('rg-pass'), n = val('rg-nick').trim();
-    if(!u || !p || !n){ showMsg('请填写完整的用户名、密码和昵称'); return; }
+    if(!u || !p || !n){ showMsg('请填写完整的登录id、密码和昵称'); return; }
     const d = await api.post('/api/auth/register', {username:u, password:p, nickname:n});
     api.setAuth(d.token, d.user); showMsg('注册成功，请先完善个人资料', true); go('#/profile');
   }catch(e){ showMsg(e.message); }
@@ -684,7 +684,7 @@ async function renderStaff(){
   if(d.isSuper){
     const users = await api.get('/api/auth/users');
     html += `<div class="card"><h3>用户列表 <span class="muted">（${users.users.length} 人）</span></h3><table class="tbl">
-    <tr><th>昵称</th><th>用户名</th><th>ID</th><th>天梯分</th><th>位置</th><th>签名</th><th>角色</th><th></th></tr>`;
+    <tr><th>昵称</th><th>登录id</th><th>ID</th><th>天梯分</th><th>位置</th><th>签名</th><th>角色</th><th></th></tr>`;
     users.users.forEach(u=>{
       const isSuper = d.superAdmin && d.superAdmin.userID===u.userID;
       const isAdm = d.admins.some(a=>a.userID===u.userID);
@@ -706,7 +706,7 @@ function renderProfile(){
   const rolesText = (u.roles||[]).map(r=>['','一号位','二号位','三号位','四号位','五号位'][r]).filter(Boolean).join('、') || '未设置';
   $('#view').innerHTML = `<div class="card" style="max-width:520px;margin:0 auto">
     <h3>我的资料</h3>
-    <p class="muted" style="margin-bottom:12px">用户名：${esc(u.username)}（ID ${u.userID}）</p>
+    <p class="muted" style="margin-bottom:12px">登录id：${esc(u.username)}（ID ${u.userID}）</p>
     <table style="width:100%;line-height:2">
       <tr><td class="muted" style="width:110px">昵称</td><td>${esc(u.nickname)}</td></tr>
       <tr><td class="muted">天梯分</td><td>${u.mmr ? u.mmr : '未设置'}</td></tr>
@@ -719,7 +719,7 @@ function editProfile(){
   const u = api.me;
   $('#view').innerHTML = `<div class="card" style="max-width:520px;margin:0 auto">
     <h3>编辑个人资料</h3>
-    <p class="muted" style="margin-bottom:12px">用户名：${esc(u.username)}（ID ${u.userID}）</p>
+    <p class="muted" style="margin-bottom:12px">登录id：${esc(u.username)}（ID ${u.userID}）</p>
     <label class="muted">昵称</label><input id="p-nick" value="${esc(u.nickname)}" style="width:100%;margin-bottom:10px">
     <label class="muted">天梯分（必填，1-20000）</label><input id="p-mmr" type="number" value="${u.mmr}" min="1" max="20000" style="width:100%;margin-bottom:10px">
     <label class="muted">常玩位置（可多选）</label>

@@ -8,7 +8,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// User 用户（Web 版身份：自增 ID + 用户名）
+// User 用户（Web 版身份：自增 ID + 登录id）
 type User struct {
 	ID        int      `json:"userID"`
 	Username  string   `json:"username"`
