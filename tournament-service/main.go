@@ -157,6 +157,7 @@ func main() {
 	mux.HandleFunc("POST /api/tournament/{id}/seeding", app.wrap(app.setSeeding))
 	mux.HandleFunc("POST /api/tournament/{id}/shuffle-seeding", app.wrap(app.shuffleSeeding))
 	mux.HandleFunc("POST /api/tournament/{id}/start-bracket", app.wrap(app.startBracket))
+	mux.HandleFunc("POST /api/tournament/{id}/stage-rollback", app.wrap(app.stageRollback))
 	mux.HandleFunc("POST /api/tournament/{id}/bo", app.wrap(app.setMatchBo))
 	mux.HandleFunc("POST /api/tournament/{id}/result", app.wrap(app.setMatchResult))
 	mux.HandleFunc("POST /api/tournament/{id}/reset-result", app.wrap(app.resetMatchResult))

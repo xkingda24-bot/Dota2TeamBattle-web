@@ -496,9 +496,14 @@ async function renderDetail(id){
       html += `<button class="btn ghost" onclick="randomSeeding(${t.id})">随机落位</button>`;
       if(t.draftInfo && t.draftInfo.done) html += `<button class="btn ok" onclick="startBracket(${t.id})">生成对阵</button>`;
       if(t.mode==='auto') html += `<button class="btn danger" onclick="resetGroup(${t.id})">重新分组</button>`;
+      if(!t.archivedAt) html += `<button class="btn ghost" onclick="rollbackStage(${t.id},'registration')">回到报名</button>`;
     }
     if(t.status==='battle'){
       html += `<button class="btn" onclick="go('#/bracket/${t.id}')">进入赛程管理</button>`;
+      if(!t.archivedAt){
+        html += `<button class="btn ghost" onclick="rollbackStage(${t.id},'draft')">回到选人</button>`;
+        html += `<button class="btn ghost" onclick="rollbackStage(${t.id},'registration')">回到报名</button>`;
+      }
     }
     if(t.champion && !t.archivedAt){
       html += `<button class="btn ok" onclick="finishTournament(${t.id})">归档比赛</button>`;
@@ -570,6 +575,12 @@ async function moveReg(id, uid, toRole){
 }
 async function startDraft(id){
   try{ await api.post('/api/tournament/'+id+'/start-draft', {}); showMsg('选人已开始', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+}
+async function rollbackStage(id, stage){
+  const cn = stage==='draft'?'选人':'报名';
+  confirmBox('调整阶段','确定回到'+cn+'阶段？这会清除后续赛程数据（报名名单保留）','确定', async()=>{
+    try{ await api.post('/api/tournament/'+id+'/stage-rollback', {stage}); showMsg('已回到'+cn+'阶段', true); renderDetail(id); }catch(e){ showMsg(e.message); }
+  });
 }
 async function editConfig(id){
   const t = await api.get('/api/tournament/'+id);

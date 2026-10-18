@@ -869,6 +869,79 @@ func (a *App) moveRegistration(w http.ResponseWriter, r *http.Request, uid int) 
 	writeOK(w, true)
 }
 
+/* 阶段回退（管理员）：battle→draft/registration，draft→registration；已结束/已归档不可回退 */
+func (a *App) stageRollback(w http.ResponseWriter, r *http.Request, uid int) {
+	if !a.adminClient.IsAdmin(uid) {
+		writeErr(w, http.StatusForbidden, "需要管理员权限")
+		return
+	}
+	id, ok := a.pathID(r)
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "参数错误")
+		return
+	}
+	t, err := a.getTournament(id)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "比赛不存在")
+		return
+	}
+	if t.ArchivedAt != nil || t.Status == "finished" {
+		writeErr(w, http.StatusForbidden, "已结束的比赛不能调整阶段")
+		return
+	}
+	var req struct {
+		Stage string `json:"stage"`
+	}
+	json.NewDecoder(r.Body).Decode(&req)
+	if req.Stage != "registration" && req.Stage != "draft" {
+		writeErr(w, http.StatusBadRequest, "目标阶段无效")
+		return
+	}
+	// 清空赛程/选人/对阵数据（保留报名名单与队长队名）
+	resetProgress := func() {
+		t.CaptainOrder = nil
+		t.Draft = nil
+		t.Teams = nil
+		t.Seeding = nil
+		t.Matches = nil
+		t.Champion = nil
+		t.ArchivedAt = nil
+	}
+	switch t.Status {
+	case "registration":
+		writeErr(w, http.StatusBadRequest, "当前已在报名阶段，无法回退")
+		return
+	case "draft":
+		if req.Stage != "registration" {
+			writeErr(w, http.StatusBadRequest, "选人阶段只能回到报名阶段")
+			return
+		}
+		resetProgress()
+	case "battle":
+		if req.Stage == "draft" {
+			// 回到选人：保留选人进度（未完成可继续，已完成可重新生成对阵）
+			t.Teams = nil
+			t.Seeding = nil
+			t.Matches = nil
+			t.Champion = nil
+			t.ArchivedAt = nil
+		} else {
+			resetProgress()
+		}
+	default:
+		writeErr(w, http.StatusBadRequest, "当前状态不可回退")
+		return
+	}
+	t.Status = req.Stage
+	a.lock(t.ID).Lock()
+	defer a.lock(t.ID).Unlock()
+	if err := a.store.Save(t); err != nil {
+		writeErr(w, http.StatusInternalServerError, "服务异常")
+		return
+	}
+	writeOK(w, true)
+}
+
 /* 设置队伍名称（队长本人/组长本人或管理员） */
 /* 预设队伍图标（Dota2 相关 + 趣味图标，前后端一致） */
 var teamIcons = []string{"⚔️", "🛡️", "🐉", "🐺", "🦇", "🔥", "❄️", "⚡", "💀", "👑", "🏹", "🗡️", "🪓", "🐍", "☠️", "👹", "🧙", "🧝"}
