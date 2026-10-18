@@ -76,7 +76,6 @@ input:focus,select:focus{border-color:var(--accent)}
       <button class="btn ghost small" onclick="go('#/home')">主页</button>
       <button class="btn ghost small" onclick="go('#/create')" id="nav-create" style="display:none">创建比赛</button>
       <button class="btn ghost small" onclick="go('#/staff')" id="nav-staff" style="display:none">管理员</button>
-      <button class="btn ghost small" onclick="go('#/profile')" id="nav-profile">我的资料</button>
     </nav>
     <div class="user" id="userinfo"></div>
   </div>
@@ -138,8 +137,7 @@ function renderTopbar(){
   tb.classList.remove('hidden');
   $('#nav-create').style.display = api.me.isAdmin ? '' : 'none';
   $('#nav-staff').style.display = api.me ? '' : 'none';
-  $('#nav-profile').textContent = '我的资料';
-  $('#userinfo').innerHTML='<span class="muted">'+esc(api.me.nickname)+'</span><button class="btn ghost small" onclick="logout()">退出</button>';
+  $('#userinfo').innerHTML='<span class="muted">'+esc(api.me.nickname)+'</span><button class="btn ghost small" onclick="go(\'#/profile\')">我的资料</button><button class="btn ghost small" onclick="logout()">退出</button>';
 }
 function logout(){ api.clear(); go('#/login'); }
 
@@ -276,12 +274,12 @@ async function initSuper(){
 
 // ---------- 创建比赛 ----------
 function renderCreate(){
-  const now = new Date();
-  const defTime = now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate()+' '+(now.getHours()+1)+':00';
+  const t = new Date(Date.now()+3600*1000);
+  const defTime = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')+'T'+String(t.getHours()).padStart(2,'0')+':00';
   $('#view').innerHTML = `<div class="card" style="max-width:560px;margin:0 auto">
     <h3>创建比赛</h3>
     <label class="muted">比赛名称</label><input id="c-name" placeholder="例：周末内战" style="width:100%;margin-bottom:10px">
-    <label class="muted">比赛时间</label><input id="c-time" value="${defTime}" style="width:100%;margin-bottom:10px">
+    <label class="muted">比赛开始时间</label><input id="c-time" type="datetime-local" value="${defTime}" style="width:100%;margin-bottom:10px">
     <label class="muted">比赛密码（参加者需输入）</label><input id="c-secret" placeholder="例：1234" style="width:100%;margin-bottom:10px">
     <label class="muted">模式</label>
     <select id="c-mode" style="width:100%;margin-bottom:10px">
@@ -298,7 +296,7 @@ function renderCreate(){
 async function doCreate(){
   try{
     const d = await api.post('/api/tournament', {
-      name:$('#c-name').value.trim(), time:$('#c-time').value.trim(), secret:$('#c-secret').value.trim(),
+      name:$('#c-name').value.trim(), time:$('#c-time').value.trim().replace('T',' '), secret:$('#c-secret').value.trim(),
       mode:$('#c-mode').value, N:Number($('#c-n').value), K:Number($('#c-k').value), waitLimit:Number($('#c-wait').value)
     });
     showMsg('创建成功', true); go('#/t/'+d.id);
