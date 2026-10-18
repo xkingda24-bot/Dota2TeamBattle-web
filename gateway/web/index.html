@@ -763,7 +763,23 @@ async function renderDraft(id){
   $('#view').innerHTML = html;
 }
 async function pickPlayer(id, pid){
-  try{ const d = await api.post('/api/tournament/'+id+'/pick', {playerUserID:pid}); renderDraft(id); }catch(e){ showMsg(e.message); }
+  let t;
+  try{ t = await api.get('/api/tournament/'+id); }catch(e){ showMsg(e.message); return; }
+  const d = t.draftInfo;
+  if(!d || !d.currentCaptain){ showMsg('当前没有队长在选人'); return; }
+  const cap = d.currentCaptain;
+  const target = (d.remainingPlayers||[]).find(p=>p.userID===pid);
+  const name = target?target.nickname:'该队员';
+  const isAdminAct = t.isAdmin && api.me.userID!==cap.userID;
+  if(isAdminAct){
+    confirmBox('代替选人','⚠️ 你正在代替队长“'+esc(cap.nickname)+'”选择队员“'+esc(name)+'”，确定继续？','确定代替', async()=>{
+      try{ await api.post('/api/tournament/'+id+'/pick', {playerUserID:pid}); showMsg('已代替队长选择', true); renderDraft(id); }catch(e){ showMsg(e.message); }
+    });
+  }else{
+    confirmBox('确认选人','确定选择队员“'+esc(name)+'”？','确定', async()=>{
+      try{ await api.post('/api/tournament/'+id+'/pick', {playerUserID:pid}); renderDraft(id); }catch(e){ showMsg(e.message); }
+    });
+  }
 }
 async function resetDraft(id){
   confirmBox('重置选人','将清空已选队员并重新随机队长顺序，确定？','重置', async()=>{ try{ await api.post('/api/tournament/'+id+'/reset-draft', {}); renderDraft(id); }catch(e){ showMsg(e.message); } });
