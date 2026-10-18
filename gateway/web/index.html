@@ -41,6 +41,13 @@ h3{font-size:15px;font-weight:700}
 .card h3{margin-bottom:10px;font-size:15px;color:var(--text);padding-left:9px;border-left:3px solid var(--accent)}
 .grid{display:grid;gap:12px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot-wrap{position:relative;margin-left:auto}
+.dot-btn{background:transparent;border:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:4px 10px;border-radius:6px}
+.dot-btn:hover{background:var(--panel2);color:var(--text)}
+.dot-pop{position:absolute;right:0;top:28px;min-width:130px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-m);box-shadow:0 6px 20px rgba(0,0,0,.5);z-index:40;overflow:hidden}
+.dot-pop button{display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;color:var(--text);cursor:pointer;font-size:14px;white-space:nowrap}
+.dot-pop button:hover{background:var(--panel2)}
+.dot-pop .danger{color:#f85149}
 .muted{color:var(--muted);font-size:12px}
 .tag{display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:12px;background:var(--panel2);border:1px solid var(--border)}
 .tag.reg{color:var(--ok);border-color:var(--ok);background:rgba(63,185,80,.12)}
@@ -286,6 +293,13 @@ function cardList(list, d){
         <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
         ${t.champion ? `<span class="tag finished">冠军：${esc(t.champion.name)}</span>` : ''}
         ${t.meRegistered ? '<span class="tag reg">已报名</span>' : ''}
+        ${isAdmin?`<span class="dot-wrap" onclick="event.stopPropagation()">
+          <button type="button" class="dot-btn" title="管理" onclick="toggleDotMenu(this)">⋮</button>
+          <div class="dot-pop" style="display:none">
+            ${canArchive?`<button type="button" onclick="archiveFromHome(${t.id})">归档到历史</button>`:''}
+            <button type="button" class="danger" onclick="delFromHome(${t.id})">删除比赛</button>
+          </div>
+        </span>`:''}
       </div>
       <div class="row" style="margin-top:6px">
         <span class="muted">时间:${esc(t.time||'')} · ${t.N}队 · 创建人:${esc(t.creatorName||'')}</span>
@@ -293,12 +307,18 @@ function cardList(list, d){
       <div class="row" style="margin-top:6px">
         <span class="muted">队长 ${t.captainFilled}/${t.captainTotal} · 队员 ${t.playerFilled}/${t.playerTotal}</span>
       </div>
-      ${isAdmin?`<div class="row" style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--border)">
-        ${canArchive?`<button class="btn ghost small" onclick="event.stopPropagation();archiveFromHome(${t.id})">归档到历史</button>`:''}
-        <button class="btn danger small" onclick="event.stopPropagation();delFromHome(${t.id})">删除</button>
-      </div>`:''}</div>`;
+    </div>`;
   }).join('');
 }
+function toggleDotMenu(btn){
+  const pop = btn.nextElementSibling;
+  const willShow = pop.style.display === 'none';
+  document.querySelectorAll('.dot-pop').forEach(p => p.style.display = 'none');
+  pop.style.display = willShow ? 'block' : 'none';
+}
+document.addEventListener('click', e => {
+  if(!e.target.closest('.dot-wrap')) document.querySelectorAll('.dot-pop').forEach(p => p.style.display = 'none');
+});
 async function archiveFromHome(id){
   confirmBox('归档比赛','该比赛已产生冠军，归档后将移到历史比赛列表。确定归档？','归档', async()=>{ try{ await api.post('/api/tournament/'+id+'/finish', {}); showMsg('已归档到历史比赛', true); renderHome(); }catch(e){ showMsg(e.message); } });
 }
