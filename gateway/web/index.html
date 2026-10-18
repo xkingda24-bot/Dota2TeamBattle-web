@@ -292,8 +292,14 @@ async function doCreate(){
 
 // ---------- 比赛详情 ----------
 async function renderDetail(id){
+  id = Number(String(id).replace(/\D/g,'')) || 0;  // 归一化 hash 传入的 id（如 '/12' → 12）
   if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   const t = await api.get('/api/tournament/'+id);
+  // 需求 4.1：报名阶段，未报名且本机未通过暗号 → 先弹暗号验证，通过后才能进入报名页
+  if(t.status==='registration' && !t.myReg && !t.isAdmin && !localStorage.getItem('d2_passed_'+id)){
+    showSecretGate(id);
+    return;
+  }
   const me = api.me;
   let html = `<div class="row" style="margin-bottom:10px">
     <h2 style="flex:1">${esc(t.name)}</h2>
@@ -379,6 +385,34 @@ async function renderDetail(id){
     refreshTimer = setInterval(()=>{ renderDetail(id); }, 8000);
   }
   $('#view').innerHTML = html;
+}
+/* 暗号验证闸门（需求 4.1）：点击比赛后未报名且本机未通过暗号 → 先弹窗验证 */
+function showSecretGate(id){
+  $('#modal').innerHTML = `<h3>输入报名暗号</h3>
+    <label class="muted">暗号校验通过后才能进入报名</label>
+    <input id="gate-secret" placeholder="报名暗号" style="width:100%;margin-top:6px">
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" onclick="closeModal(); go('#/home')">返回</button>
+      <button class="btn" style="flex:1" onclick="checkSecretGate(${id})">验证</button>
+    </div>`;
+  $('#modal-bg').classList.add('show');
+  setTimeout(()=>{ const el=$('#gate-secret'); if(el) el.focus(); }, 60);
+}
+async function checkSecretGate(id){
+  const v = $('#gate-secret').value.trim();
+  if(!v){ showMsg('请输入报名暗号'); return; }
+  try{
+    const d = await api.post('/api/tournament/'+id+'/check-secret', {secret: v});
+    if(d.correct){
+      localStorage.setItem('d2_secret_'+id, v);
+      localStorage.setItem('d2_passed_'+id, '1');
+      closeModal();
+      renderDetail(id);
+    }else{
+      showMsg('暗号错误，无法进入报名');
+      const el=$('#gate-secret'); if(el) el.focus();
+    }
+  }catch(e){ showMsg(e.message); }
 }
 async function doTournamentRegister(id){
   try{
