@@ -258,13 +258,14 @@ function cardList(list, d){
       <div class="row">
         <b>${esc(t.name)}</b>
         <span class="tag ${t.status}">${STATUS_CN[t.status]||t.status}</span>
-        <span class="muted">${esc(t.time||'')}</span>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <span class="muted">${MODE_CN[t.mode]} · N=${t.N} K=${t.K}</span>
-        <span class="muted">队长 ${t.captainFilled}/${t.captainTotal} · 队员 ${t.playerFilled}/${t.playerTotal}</span>
         ${t.champion ? `<span class="tag finished">冠军：${esc(t.champion.name)}</span>` : ''}
         ${t.meRegistered ? '<span class="tag reg">已报名</span>' : ''}
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="muted">时间:${esc(t.time||'')} · ${t.N}队 · 创建人:${esc(t.creatorName||'')}</span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="muted">队长 ${t.captainFilled}/${t.captainTotal} · 队员 ${t.playerFilled}/${t.playerTotal}</span>
       </div></div>`;
   }).join('');
 }
